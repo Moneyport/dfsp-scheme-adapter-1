@@ -8,9 +8,9 @@
 		<version>1.0.2</version>
 	</parent>
 
-	<groupId>com.mojaloop.interop</groupId>
+	<groupId>com.pdp.interop</groupId>
 	<artifactId>dfsp-scheme-adapter</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<packaging>mule</packaging>
 	<name>Mule DFSP Scheme Adapter</name>
 
