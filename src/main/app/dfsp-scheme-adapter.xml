@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans"
+	xmlns:metrics="http://www.mulesoft.org/schema/mule/metrics" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/metrics http://www.mulesoft.org/schema/mule/metrics/current/mule-metrics.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<spring:beans>
+		<spring:import resource="classpath:services-common.xml" />
+		<spring:import resource="classpath:metrics.xml" />
+	</spring:beans>
+
+	<spring:beans>
+		<spring:bean id="ExceptionTransformer" name="ExceptionTransformer"
+			class="com.pdp.interop.L1PExceptionTransformer" />
+	</spring:beans>
+
+	<flow name="get:/health:central-directory-api-config">
+		<http:listener config-ref="api-httpListenerConfig" path="${switch-service.basepath}/*" doc:name="HTTP"/>
+		<set-payload value="{ &quot;status&quot; : &quot;ok&quot; }"
+			doc:name="Set Payload" mimeType="application/json" />
+		<exception-strategy ref="interop-catch-exception-strategy"
+			doc:name="Reference Exception Strategy" />
+	</flow>
+
+	<catch-exception-strategy name="interop-catch-exception-strategy">
+		<set-property propertyName="Content-Type" value="application/json"
+			doc:name="Property - content-type" />
+		<set-property propertyName="http.status" value="501"
+			doc:name="Property - http status" />
+		<set-session-variable variableName="errorMessageId"
+			value="Transformer Messaging Exception" doc:name="set-errorMessageId" />
+		<transformer ref="ExceptionTransformer" doc:name="Exception Transformer" />
+	</catch-exception-strategy>
+
+</mule>

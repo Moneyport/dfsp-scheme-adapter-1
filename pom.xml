@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.pdp.interop</groupId>
+		<artifactId>interop-parent</artifactId>
+		<version>1.0.2</version>
+	</parent>
+
+	<groupId>com.mojaloop.interop</groupId>
+	<artifactId>dfsp-scheme-adapter</artifactId>
+	<version>1.0.1-SNAPSHOT</version>
+	<packaging>mule</packaging>
+	<name>Mule DFSP Scheme Adapter</name>
+
+	<scm>
+		<connection>scm:git:https://github.com/mojaloop/dfsp-scheme-adapter</connection>
+		<tag>HEAD</tag>
+	</scm>
+
+	<properties>
+		<interop-domain.version>1.0.4</interop-domain.version>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+    	<mule.version>3.9.0</mule.version>
+    </properties>
+
+	<dependencies>
+    	<dependency>
+            <groupId>com.pdp.interop</groupId>
+            <artifactId>interop-domain</artifactId>
+			<version>${interop-domain.version}</version>
+            <type>zip</type>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -1,0 +1,80 @@
+# ------------------------------------------------------------------------------ #
+# Java defaults (https://github.com/github/gitignore/blob/master/Java.gitignore) #
+# ------------------------------------------------------------------------------ #
+*.class
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# ------------------------------------------------------------------------------------------- #
+# Eclipse-specific (https://github.com/github/gitignore/blob/master/Global/Eclipse.gitignore) #
+# ------------------------------------------------------------------------------------------- #
+*.pydevproject
+.metadata
+bin/**
+tmp/**
+tmp/**/*
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+# You may want to remove the sharp symbols here if you are using Maven 
+.project
+.classpath
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# CDT-specific
+.cproject
+
+# PDT-specific
+.buildpath
+
+# --------------- #
+# Studio-specific #
+# --------------- #
+.studio/
+.mule/
+backups/
+ramls/
+flows/
+target/
+**/*md__io__.xml
+**/*.mflow
+studio_id.xml
+logs/
+
+# --------------- #
+# IntelliJ #
+# --------------- #
+.idea/
+**/*.iml
+MetricsTest/
+!/mule_artifacts/mule-tests-functional-3.8.4-SNAPSHOT.jar
+!/mule_artifacts/grizzly-http-servlet-2.3.24.jar
+!/mule_artifacts/grizzly-framework-2.3.25.jar
+!/mule_artifacts/javax.json-1.0.4.jar
+!/mule_artifacts/rest-assured-common-3.0.1.jar
+!/mule_artifacts/junit-4.11.jar
+!/mule_artifacts/javax.websocket-api-1.1.jar
+!/mule_artifacts/javax.websocket-client-api-1.1.jar
+!/mule_artifacts/junit-4.12.jar
+!/mule_artifacts/groovy-json-2.4.6.jar
+!/mule_artifacts/tyrus-client-1.13.jar
+!/mule_artifacts/tyrus-core-1.13.jar
+!/mule_artifacts/json-path-3.0.1.jar
+!/mule_artifacts/mule-tests-functional-3.8.1.jar
+!/mule_artifacts/tyrus-spi-1.13.jar
+!/mule_artifacts/tyrus-container-grizzly-client-1.13.jar
+!/mule_artifacts/xml-path-3.0.1.jar
+!/mule_artifacts/xmlunit-1.6.jar
+!/mule_artifacts/commons-lang3-3.4.jar
