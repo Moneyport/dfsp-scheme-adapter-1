@@ -1,39 +1,103 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core"
-	  xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	  xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	  xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
 
-	<spring:beans>
-		<spring:import resource="classpath:services-common.xml" />
-		<spring:import resource="classpath:metrics.xml" />
-	</spring:beans>
+    <spring:beans>
+        <spring:import resource="classpath:services-common.xml"/>
+        <spring:import resource="classpath:metrics.xml"/>
+    </spring:beans>
 
-	<spring:beans>
-		<spring:bean id="ExceptionTransformer" name="ExceptionTransformer"
-			class="com.pdp.interop.L1PExceptionTransformer" />
-	</spring:beans>
+    <spring:beans>
+        <spring:bean id="ExceptionTransformer" name="ExceptionTransformer"
+                     class="com.pdp.interop.L1PExceptionTransformer"/>
+        <spring:bean id="syncAsyncMappingStore" name="SyncAsyncMappingStore"
+                     class="com.mojaloop.interop.SyncAsyncMappingStore"/>
+        <spring:bean id="utils" name="Utils"
+                     class="com.mojaloop.interop.Utils"/>
+    </spring:beans>
 
-	<flow name="get:/health">
-		<http:listener config-ref="api-httpListenerConfig" path="${dfsp-scheme-adapter.basepath}/health" doc:name="HTTP"/>
-		<set-payload value="{ &quot;status&quot; : &quot;ok&quot; }"
-			doc:name="Set Payload" mimeType="application/json" />
-		<exception-strategy ref="interop-catch-exception-strategy"
-			doc:name="Reference Exception Strategy" />
-	</flow>
+    <http:request-config name="account-lookup-service-http-config" host="${account-lookup-service.host}"
+                         port="${account-lookup-service.port}" basePath="${account-lookup-service.basepath}" doc:name="Account-Lookup HTTP Config">
+    </http:request-config>
 
-	<catch-exception-strategy name="interop-catch-exception-strategy">
-		<set-property propertyName="Content-Type" value="application/json"
-			doc:name="Property - content-type" />
-		<set-property propertyName="http.status" value="501"
-			doc:name="Property - http status" />
-		<set-session-variable variableName="errorMessageId"
-			value="Transformer Messaging Exception" doc:name="set-errorMessageId" />
-		<transformer ref="ExceptionTransformer" doc:name="Exception Transformer" />
-	</catch-exception-strategy>
+
+    <flow name="get:/health">
+        <http:listener config-ref="api-httpListenerConfig" path="${dfsp-scheme-adapter.basepath}/health"
+                       doc:name="HTTP"/>
+        <set-payload value="{ &quot;status&quot; : &quot;ok&quot; }"
+                     doc:name="Set Payload" mimeType="application/json"/>
+        <exception-strategy ref="interop-catch-exception-strategy"
+                            doc:name="Reference Exception Strategy"/>
+    </flow>
+
+    <flow name="post:/commands/register">
+        <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/commads/register"
+                       doc:name="HTTP"/>
+        <logger level="INFO"
+                message="Sending Request to GET http://${account-lookup-service.host}:${account-lookup-service.port}${account-lookup-service.basepath}/fsp"
+                category="com.pdp.interop.switch.get-parties-type-id" doc:name="logger"/>
+        <http:request config-ref="account-lookup-service-http-config"
+                      path="/fsp" method="POST" doc:name="Add FSP">
+            <http:success-status-code-validator values="200..599"/>
+        </http:request>
+        <set-property propertyName="http.status" value="#[message.inboundProperties.'http.status']"
+                      doc:name="Property"/>
+        <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+        <logger level="INFO"
+                message="Response from /commands/register L1p-Trace-Id=#[sessionVars.'L1p-Trace-Id'] Response: #[message.payloadAs(java.lang.String)]"
+                category="com.mojaloop.interop.dfsp.directory.resgister" doc:name="logger"/>
+        <exception-strategy ref="interop-catch-exception-strategy" doc:name="Reference Exception Strategy"/>
+    </flow>
+
+    <flow name="post:/resources">
+        <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/resources"
+                       doc:name="HTTP"/>
+        <object-to-string-transformer/>
+        <expression-component doc:name="Get Participant">
+            <![CDATA[flowVars.retMap = app.registry.utils.createAddParticipantRequest(payload,message.inboundProperties.authorization)]]></expression-component>
+
+        <set-variable variableName="correlationId" value="#[function:uuid] "/>
+        <set-payload value="#[flowVars.retMap.addParticipantsRequest]"/>
+        <logger level="INFO"
+                message="Sending request to POST http://${account-lookup-service.host}:${account-lookup-service.port}${account-lookup-service.basepath}/participants/#[flowVars.retMap.identifierType]/#[flowVars.retMap.identifier] method:post payload: #[message.payloadAs(java.lang.String)] CorrelationId: #[flowVars.correlationId]"
+                category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger" />
+        <http:request config-ref="account-lookup-service-http-config"
+                      path="/participants/#[flowVars.retMap.identifierType]/#[flowVars.retMap.identifier]" method="POST" doc:name="Call account-lookup /participants">
+            <http:request-builder>
+                <http:header headerName="X-Source-Identifier" value="#[flowVars.retMap.dfspName]" />
+                <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]" />
+            </http:request-builder>
+            <http:success-status-code-validator values="200..599"/>
+        </http:request>
+        <set-payload value="#[flowVars.retMap.resourceResponse]"/>
+        <!--<expression-component doc:name="Get Participant">-->
+            <!--<![CDATA[payload = app.registry.syncAsyncMappingStore.getParticipant(flowVars.correlationId.trim())]]></expression-component>-->
+    </flow>
+
+    <flow name="callback-post:/resources">
+        <http:listener config-ref="api-httpListenerConfig" path="/dfsp/scheme/adapter/v1/participants/*"
+                       doc:name="HTTP"/>
+        <set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Forwarded-For']"/>
+        <object-to-string-transformer/>
+        <expression-component doc:name="Post Participant">
+            <![CDATA[app.registry.syncAsyncMappingStore.addParticipant(flowVars.correlationId.trim(),payload)]]></expression-component>
+
+    </flow>
+
+    <catch-exception-strategy name="interop-catch-exception-strategy">
+        <set-property propertyName="Content-Type" value="application/json"
+                      doc:name="Property - content-type"/>
+        <set-property propertyName="http.status" value="501"
+                      doc:name="Property - http status"/>
+        <set-session-variable variableName="errorMessageId"
+                              value="Transformer Messaging Exception" doc:name="set-errorMessageId"/>
+        <transformer ref="ExceptionTransformer" doc:name="Exception Transformer"/>
+    </catch-exception-strategy>
 
 </mule>

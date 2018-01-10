@@ -1,10 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+      xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
-    
-    
+
+    <apikit:config name="mojaloop-config" raml="mojaloop.raml" consoleEnabled="false" doc:name="Router"/>
+
+    <http:request-config name="dfsp-api-http-config" host="${dfsp-host}" port="${dfsp-api.port}"
+                         doc:name="DFSP API Config" responseTimeout="30000" />
+    <http:request-config name="interop-router-configuration" host="${routing-service.host}" port="${routing-service.port}"
+                         doc:name="interop-router configuration" responseTimeout="30000">
+    </http:request-config>
+    <http:request-config name="overide-this-config" doc:name="Dummy config that should be overidden"/>
+
+    <flow name="mojaloop-main">
+        <http:listener config-ref="api-httpListenerConfig" path="/dfsp/scheme/adapter/v1/*" doc:name="HTTP"/>
+        <apikit:router config-ref="mojaloop-config" doc:name="APIkit Router"/>
+        <exception-strategy ref="apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy"/>
+    </flow>
+
     <flow name="put:/authorizations/{ID}:application/json:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
@@ -87,7 +106,48 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
     <flow name="get:/parties/{Type}/{ID}:mojaloop-config">
+        <logger level="INFO"
+                message="X-Source-Id: #[message.inboundProperties.'X-Source-Identifier'] X-Dest-Id: #[message.inboundProperties.'X-Destination-Identifier']"
+                category="com.pdp.interop.mockfsp" doc:name="logger"/>
+        <set-property propertyName="Type" value="#[message.inboundProperties.'http.uri.params'.Type]"/>
+        <set-property propertyName="ID" value="#[message.inboundProperties.'http.uri.params'.ID]"/>
+        <flow-ref name="populate-outbound-properties"/>
+        <set-payload value="trigger"/>
+        <vm:outbound-endpoint exchange-pattern="one-way" path="GetParty" doc:name="VM"/>
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        <set-property propertyName="http.status" value="202" doc:name="Property"/>
+    </flow>
+    <flow name="dequeue-get:/parties/{Type}/{ID}:mojaloop-config">
+        <vm:inbound-endpoint exchange-pattern="one-way" address="vm://GetParty" doc:name="VM"/>
+        <flow-ref name="populate-outbound-properties"/>
+        <set-variable variableName="receiverType" value="#[message.inboundProperties.Type]"
+                      doc:name="Variable"/>
+        <set-variable variableName="receiverId" value="#[message.inboundProperties.ID]"
+                      doc:name="Variable"/>
+        <logger level="INFO"
+                message="Sending request for GET on http://${dfsp-host}:${dfsp-api.port}/receivers/#[message.inboundProperties.ID], Authorization=#['Basic ']${dfsp-api.auth_value}"
+                category="com.l1p.interop.scheme.adapter.fetch-payee" doc:name="logger" />
+        <http:request config-ref="dfsp-api-http-config" path="/receivers/#[message.inboundProperties.ID]"
+                      method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:header headerName="Authorization" value="#['Basic ']${dfsp-api.auth_value}" />
+            </http:request-builder>
+            <http:success-status-code-validator values="200,400" />
+        </http:request>
+        <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
+        <logger level="INFO"
+                message="Response from dfsp: #[payload]"
+                category="com.pdp.interop.switch" doc:name="logger"/>
+        <expression-component doc:name="Get Participant">
+            <![CDATA[payload = app.registry.utils.getMojaloopPartiesResponse(payload,flowVars.receiverId)]]></expression-component>
+        <logger level="INFO"
+                message="Sending Request to PUT http://${routing-service.host}:${routing-service.port}/interop/switch/v1/parties/#[flowVars.receiverType]/#[flowVars.receiverId] Payload: #[payload]"
+                category="com.pdp.interop.switch" doc:name="logger"/>
+        <!--<http:request config-ref="interop-router-configuration"-->
+                      <!--path="/interop/switch/v1/parties/#[message.inboundProperties.Type]/#[message.inboundProperties.ID]"-->
+                      <!--method="PUT" doc:name="HTTP">-->
+            <!--<http:success-status-code-validator values="200..599"/>-->
+        <!--</http:request>-->
     </flow>
     <flow name="get:/transactions/{ID}:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
@@ -146,31 +206,60 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     <flow name="post:/participants/{Type}/{ID}:application/json:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
-    <apikit:mapping-exception-strategy name="mojaloop-apiKitGlobalExceptionMapping">
+    <sub-flow name="populate-outbound-properties">
+        <!-- Populate out-bound properties based on in-bound headers -->
+        <expression-component doc:name="Set-Accept"><![CDATA[if( message.inboundProperties.Accept != null )
+	message.outboundProperties['Accept'] = message.inboundProperties.Accept;]]></expression-component>
+        <expression-component doc:name="Set-Date"><![CDATA[if( message.inboundProperties.Date != null )
+	message.outboundProperties['Date'] = message.inboundProperties.Date;]]></expression-component>
+        <!--<expression-component doc:name="Set-Content-Length"><![CDATA[if( message.inboundProperties.'Content-Length' != null )-->
+        <!--message.outboundProperties['Content-Length'] = message.inboundProperties.'Content-Length';]]></expression-component>-->
+        <expression-component doc:name="Set-Content-Type"><![CDATA[if( message.inboundProperties.'Content-Type' != null )
+	message.outboundProperties['Content-Type'] = message.inboundProperties.'Content-Type';]]></expression-component>
+        <expression-component doc:name="Set-X-Source-Identifier"><![CDATA[if( message.inboundProperties.'X-Source-Identifier' != null )
+	message.outboundProperties['X-Source-Identifier'] = message.inboundProperties.'X-Source-Identifier';]]></expression-component>
+        <expression-component doc:name="Set-X-Destination-Identifier"><![CDATA[if( message.inboundProperties.'X-Destination-Identifier' != null )
+	message.outboundProperties['X-Destination-Identifier'] = message.inboundProperties.'X-Destination-Identifier';]]></expression-component>
+        <expression-component doc:name="Set-X-Forwarded-For"><![CDATA[if( message.inboundProperties.'X-Forwarded-For' != null )
+	message.outboundProperties['X-Forwarded-For'] = message.inboundProperties.'X-Forwarded-For';]]></expression-component>
+        <expression-component doc:name="Set-X-API-Encryption"><![CDATA[if( message.inboundProperties.'X-API-Encryption' != null )
+	message.outboundProperties['X-API-Encryption'] = message.inboundProperties.'X-API-Encryption';]]></expression-component>
+        <expression-component doc:name="Set-X-API-Signature"><![CDATA[if( message.inboundProperties.'X-API-Signature' != null )
+	message.outboundProperties['X-API-Signature'] = message.inboundProperties.'X-API-Signature';]]></expression-component>
+        <expression-component doc:name="Set-X-API-URI"><![CDATA[if( message.inboundProperties.'X-API-URI' != null )
+	message.outboundProperties['X-API-URI'] = message.inboundProperties.'X-API-URI';]]></expression-component>
+        <expression-component doc:name="Set-X-HTTP-Method"><![CDATA[if( message.inboundProperties.'X-HTTP-Method' != null )
+	message.outboundProperties['X-HTTP-Method'] = message.inboundProperties.'X-HTTP-Method';]]></expression-component>
+        <logger level="INFO"
+                message="In populate outbound properties subflow. Outbound properties at this stage: #[message.outboundProperties]"
+                category="com.l1p.interop.routing.populate-outbound-properties" doc:name="logger"/>
+    </sub-flow>
+
+    <apikit:mapping-exception-strategy name="apiKitGlobalExceptionMapping">
         <apikit:mapping statusCode="404">
             <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
+            <set-property propertyName="Content-Type" value="application/json"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" />
         </apikit:mapping>
         <apikit:mapping statusCode="405">
             <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload"/>
+            <set-property propertyName="Content-Type" value="application/json"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" />
         </apikit:mapping>
         <apikit:mapping statusCode="415">
             <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload"/>
+            <set-property propertyName="Content-Type" value="application/json"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" />
         </apikit:mapping>
         <apikit:mapping statusCode="406">
             <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
+            <set-property propertyName="Content-Type" value="application/json"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" />
         </apikit:mapping>
         <apikit:mapping statusCode="400">
             <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
-            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload"/>
+            <set-property propertyName="Content-Type" value="application/json"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" />
         </apikit:mapping>
     </apikit:mapping-exception-strategy>
 </mule>
