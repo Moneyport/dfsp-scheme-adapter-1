@@ -280,8 +280,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="payeeAccount" value="#[payload.account]"/>
 
+        <!--   Call DFSP Prepare Transfer-->
         <expression-component doc:name="Get Data from Transfer Request">
-            <![CDATA[payload = app.registry.utils.createDFSPTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, ${dfsp-host}, ${dfsp-ledger.port},${dfsp-payee-connector.name})]]></expression-component>
+            <![CDATA[payload = app.registry.utils.createDFSPPrepareTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, ${dfsp-host}, ${dfsp-ledger.port},${dfsp-payee-connector.name})]]></expression-component>
         <logger level="INFO"
                 message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId], method=put payload: #[payload]"
                 category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger" />
@@ -289,6 +290,28 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                       method="PUT" doc:name="HTTP">
             <http:success-status-code-validator values="200..500" />
         </http:request>
+        <object-to-string-transformer/>
+        <logger level="INFO"
+                message="Prepare Transfer response from DFSP: #[payload]"
+                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger" />
+
+        <!--   Call DFSP Fulfill Transfer-->
+        <expression-component doc:name="Get Data from Transfer Request">
+            <![CDATA[payload = app.registry.utils.createDFSPFulfillTransferRequest(flowVars.originalMojaloopTransferRequest)]]></expression-component>
+        <set-variable variableName="transferFulfillment" value="#[payload]"/>
+        <logger level="INFO"
+                message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId]/fulfillment, method=put payload: #[payload]"
+                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger" />
+        <http:request config-ref="dfsp-ledger-http-config" path="/transfers/#[flowVars.transferId]/fulfillment"
+                      method="PUT" doc:name="HTTP">
+            <http:success-status-code-validator values="200..500" />
+        </http:request>
+        <object-to-string-transformer/>
+        <logger level="INFO"
+                message="Fulfill Transfer response from DFSP: #[payload]"
+                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger" />
+
+        <!-- Call Mojaloop Callback PUT for Fulfill Transfer-->
 
     </flow>
     <flow name="post:/participants/{Type}/{ID}/{SubId}:application/json:mojaloop-config">

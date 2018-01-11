@@ -251,7 +251,7 @@ public class Utils {
 
     }
 
-    public static String createDFSPTransferRequest(String originalMojaloopTransferRequest, String dfspPayeeAccount, String dfspHost, String dfspLedgerPort, String dfspConnectorAccountName){
+    public static String createDFSPPrepareTransferRequest(String originalMojaloopTransferRequest, String dfspPayeeAccount, String dfspHost, String dfspLedgerPort, String dfspConnectorAccountName){
         try {
             JsonPath jPathOriginalMojaloopTransferRequest = JsonPath.from(originalMojaloopTransferRequest);
 
@@ -279,5 +279,21 @@ public class Utils {
             log.info("Error in createDFSPTransferRequest: "+ExceptionUtils.getStackTrace(e));
             throw e;
         }
+    }
+
+    public static String createDFSPFulfillTransferRequest(String originalMojaloopTransferRequest){
+        JsonPath jPathOriginalMojaloopTransferRequest = JsonPath.from(originalMojaloopTransferRequest);
+        String ilpPacket = jPathOriginalMojaloopTransferRequest.getString("ilpPacket");
+        IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
+        return ilpConditionHandlerImpl.generateFulfillment(ilpPacket,"secret".getBytes());
+
+    }
+
+    public static String createMojaloopFulfillTransferResponse(String fulfillment){
+        return Json.createObjectBuilder()
+                        .add("fulfilment",fulfillment)
+                        .add("transferState","COMMITTED")
+                        .build()
+                        .toString();
     }
 }
