@@ -1,14 +1,21 @@
 package com.mojaloop.interop;
 
+import com.ilp.conditions.impl.IlpConditionHandlerImpl;
+import com.ilp.conditions.models.pdp.*;
+import io.restassured.path.json.JsonPath;
 import org.mule.util.Base64;
+import org.mule.util.ExceptionUtils;
 
 import javax.json.Json;
 import javax.json.JsonObject;
 import java.io.StringReader;
 import java.nio.charset.Charset;
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 public class Utils {
+
+    private static Logger log = Logger.getLogger("Utils.class");
 
     public static HashMap<String,String> createAddParticipantRequest(String request, String authorization){
 
@@ -51,7 +58,7 @@ public class Utils {
         return retMap;
     }
 
-    public static String getMojaloopPartiesResponse(String dfspResponse,String receiverId){
+    public static String createMojaloopPartiesResponse(String dfspResponse,String receiverId){
         JsonObject objdfspResponse = Json.createReader(new StringReader(dfspResponse)).readObject();
 
         return Json.createObjectBuilder().add("party",Json.createObjectBuilder()
@@ -67,5 +74,210 @@ public class Utils {
                 )
         ).build().toString();
 
+    }
+
+
+    public static String createDFSPQuotesRequest(String mojaloopQuotesRequest){
+        try {
+            JsonPath jPath = JsonPath.from(mojaloopQuotesRequest);
+            return Json.createObjectBuilder()
+                    .add("paymentId", jPath.getString("quoteId"))
+                    .add("payer", Json.createObjectBuilder()
+                            .add("identifier", jPath.getString("payer.partyIdInfo.partyIdentifier"))
+                            .add("identifierType", "eur")
+                    )
+                    .add("payee", Json.createObjectBuilder()
+                            .add("identifier", jPath.getString("payee.partyIdInfo.partyIdentifier"))
+                            .add("identifierType", "eur")
+                            .add("account","http://host/ledger/accounts/alice")
+                    )
+                    .add("transferType", "p2p")
+                    .add("amountType", "SEND")
+                    .add("amount", Json.createObjectBuilder()
+                            .add("amount", jPath.getString("amount.amount"))
+                            .add("currency", jPath.getString("amount.currency"))
+                    )
+                    .build()
+                    .toString();
+        }catch (Exception e){
+            log.info("Error in createDFSPQuotesRequest:"+ ExceptionUtils.getStackTrace(e));
+            throw e;
+        }
+    }
+
+    public static String createMojaloopQuotesResponse(String dfspQuotesResponse,String originalMojaloopQuotesRequest) throws Exception {
+
+        JsonPath jPathDfspQuotesResponse = JsonPath.from(dfspQuotesResponse);
+        JsonPath jPathOriginalMojaloopQuotesRequest = JsonPath.from(originalMojaloopQuotesRequest);
+
+        String fspId = jPathOriginalMojaloopQuotesRequest.getString("payee.partyIdInfo.fspId");
+        String amountStr = jPathOriginalMojaloopQuotesRequest.getString("amount.amount");
+        String ilpAddress = "private.".concat(fspId);
+        long amount = (long)Double.parseDouble(amountStr);
+
+        Transaction transaction = populateTransactionWithQuote(jPathOriginalMojaloopQuotesRequest);
+
+        log.info("IlpAddress: " + ilpAddress + " Amount: " + amount + " and Transaction: " + transaction.toString());
+
+        //Call interop-ilp-conditions jar getIlpPacket()
+        IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
+        String ilpPacket = ilpConditionHandlerImpl.getILPPacket(ilpAddress, amount, transaction);
+
+        //Call interop-ilp-conditions jar generateCondition()
+        byte[] secret = "secret".getBytes();
+        String ilpCondition = ilpConditionHandlerImpl.generateCondition(ilpPacket, secret);
+
+        return Json.createObjectBuilder()
+                .add("transferAmount",Json.createObjectBuilder()
+                                            .add("amount",jPathOriginalMojaloopQuotesRequest.getString("amount.amount"))
+                                            .add("currency",jPathOriginalMojaloopQuotesRequest.getString("amount.currency"))
+                )
+                .add("payeeFspFee",Json.createObjectBuilder()
+                                            .add("amount",jPathDfspQuotesResponse.getString("payeeFee.amount"))
+                                            .add("currency",jPathDfspQuotesResponse.getString("payeeFee.currency"))
+                )
+                .add("payeeFspCommission",Json.createObjectBuilder()
+                                            .add("amount",jPathDfspQuotesResponse.getString("payeeCommission.amount"))
+                                            .add("currency",jPathDfspQuotesResponse.getString("payeeCommission.currency"))
+                )
+                .add("expiration",jPathDfspQuotesResponse.getString("expiresAt"))
+                .add("ilpPacket",ilpPacket)
+                .add("condition",ilpCondition)
+                .build()
+                .toString();
+
+    }
+
+    private static Transaction populateTransactionWithQuote(JsonPath jPathOriginalMojaloopQuotesRequest) {
+
+        Transaction transaction = new Transaction();
+
+        transaction.setTransactionId(jPathOriginalMojaloopQuotesRequest.getString("transactionId"));
+        transaction.setQuoteId(jPathOriginalMojaloopQuotesRequest.getString("quoteId"));
+
+        Party pe = new Party();
+        pe.setMerchantClassificationCode(jPathOriginalMojaloopQuotesRequest.getString("payee.merchantClassificationCode"));
+        pe.setName(jPathOriginalMojaloopQuotesRequest.getString("payee.name"));
+        PartyIdInfo pii1 = new PartyIdInfo();
+        pii1.setFspId(jPathOriginalMojaloopQuotesRequest.getString("payee.partyIdInfo.fspId"));
+        pii1.setPartyIdentifier(jPathOriginalMojaloopQuotesRequest.getString("payee.partyIdInfo.partyIdentifier"));
+        pii1.setPartyIdType(jPathOriginalMojaloopQuotesRequest.getString("payee.partyIdInfo.partyIdType"));
+        pii1.setPartySubIdOrType(jPathOriginalMojaloopQuotesRequest.getString("payee.partyIdInfo.partySubIdOrType"));
+        pe.setPartyIdInfo(pii1);
+        PartyPersonalInfo ppi1  = new PartyPersonalInfo();
+        PartyComplexName pcn1 =  new PartyComplexName();
+        pcn1.setFirstName(jPathOriginalMojaloopQuotesRequest.getString("payee.personalInfo.complexName.firstName"));
+        pcn1.setLastName(jPathOriginalMojaloopQuotesRequest.getString("payee.personalInfo.complexName.lastName"));
+        pcn1.setMiddleName(jPathOriginalMojaloopQuotesRequest.getString("payee.personalInfo.complexName.middleName"));//TODO: Check for empty
+        ppi1.setComplexName(pcn1);
+        pe.setPersonalInfo(ppi1);
+        transaction.setPayee(pe);
+
+        Party pr = new Party();
+        pr.setMerchantClassificationCode(jPathOriginalMojaloopQuotesRequest.getString("payer.merchantClassificationCode"));
+        pr.setName(jPathOriginalMojaloopQuotesRequest.getString("payer.name"));
+        PartyIdInfo pii2 = new PartyIdInfo();
+        pii2.setFspId(jPathOriginalMojaloopQuotesRequest.getString("payer.partyIdInfo.fspId"));
+        pii2.setPartyIdentifier(jPathOriginalMojaloopQuotesRequest.getString("payer.partyIdInfo.partyIdentifier"));
+        pii2.setPartyIdType(jPathOriginalMojaloopQuotesRequest.getString("payer.partyIdInfo.partyIdType"));
+        pii2.setPartySubIdOrType(jPathOriginalMojaloopQuotesRequest.getString("payer.partyIdInfo.partySubIdOrType"));
+        pr.setPartyIdInfo(pii2);
+        PartyPersonalInfo ppi2  = new PartyPersonalInfo();
+        PartyComplexName pcn2 =  new PartyComplexName();
+        pcn2.setFirstName(jPathOriginalMojaloopQuotesRequest.getString("payer.personalInfo.complexName.firstName"));
+        pcn2.setLastName(jPathOriginalMojaloopQuotesRequest.getString("payer.personalInfo.complexName.lastName"));
+        pcn2.setMiddleName(jPathOriginalMojaloopQuotesRequest.getString("payer.personalInfo.complexName.middleName"));//TODO: Check for empty
+        ppi2.setComplexName(pcn2);
+        pr.setPersonalInfo(ppi2);
+        transaction.setPayer(pr);
+
+        Money m = new Money();
+        m.setAmount(jPathOriginalMojaloopQuotesRequest.getString("amount.amount"));
+        m.setCurrency(jPathOriginalMojaloopQuotesRequest.getString("amount.currency"));
+        transaction.setAmount(m);
+
+        TransactionType tt = new TransactionType();
+        tt.setBalanceOfPayments(jPathOriginalMojaloopQuotesRequest.getString("transactionType.balanceOfPayments"));
+        tt.setInitiator(jPathOriginalMojaloopQuotesRequest.getString("transactionType.initiator"));
+        tt.setInitiatorType(jPathOriginalMojaloopQuotesRequest.getString("transactionType.initiatorType"));
+        Refund ri = new Refund();
+        ri.setOriginalTransactionId(jPathOriginalMojaloopQuotesRequest.getString("transactionType.refundInfo.originalTransactionId"));
+        ri.setRefundReason(jPathOriginalMojaloopQuotesRequest.getString("transactionType.refundInfo.refundReason"));
+        tt.setRefundInfo(ri);
+        tt.setScenario(jPathOriginalMojaloopQuotesRequest.getString("transactionType.scenario"));
+        tt.setSubScenario(jPathOriginalMojaloopQuotesRequest.getString("transactionType.scenario"));
+        transaction.setTransactionType(tt);
+
+        transaction.setNote(jPathOriginalMojaloopQuotesRequest.getString("note"));
+
+//        ExtensionList el = new ExtensionList();
+//        Extension e1 = new Extension();
+//        e1.setKey(jPathOriginalMojaloopQuotesRequest.getString("extensionList[0].key"));
+//        e1.setValue(jPathOriginalMojaloopQuotesRequest.getString("extensionList[0].value"));
+//        Extension e2 = new Extension();
+//        e2.setKey(jPathOriginalMojaloopQuotesRequest.getString("extensionList[1].key"));
+//        e2.setValue(jPathOriginalMojaloopQuotesRequest.getString("extensionList[1].value"));
+//        List<Extension> le = new ArrayList<>();
+//        le.add(e1);
+//        le.add(e2);
+//        el.setExtension(le);
+//        transaction.setExtensionList(el);
+
+        return transaction;
+    }
+
+    public static HashMap extractDataFromMojaloopTransferRequest(String mojaloopTransferRequest) throws Exception{
+        try {
+            HashMap<String,String> retMap = new HashMap<String,String>();
+            JsonPath jPathMojaloopTransferRequest = JsonPath.from(mojaloopTransferRequest);
+
+            String ilpPacket = jPathMojaloopTransferRequest.getString("ilpPacket");
+            IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
+            Transaction decodedTxn = ilpConditionHandlerImpl.getTransactionFromIlpPacket(ilpPacket);
+            log.info("PayerId: " + decodedTxn.getPayer().getPartyIdInfo().getPartyIdentifier());
+            log.info("PayeeId: " + decodedTxn.getPayee().getPartyIdInfo().getPartyIdentifier());
+
+            retMap.put("payerId",decodedTxn.getPayer().getPartyIdInfo().getPartyIdentifier());
+            retMap.put("payeeId",decodedTxn.getPayee().getPartyIdInfo().getPartyIdentifier());
+
+            retMap.put("transferId",jPathMojaloopTransferRequest.getString("transferId"));
+
+            return retMap;
+
+        }catch (Exception e){
+            log.info("Error in extractDataFromMojaloopTransferRequest: "+ExceptionUtils.getStackTrace(e));
+            throw e;
+        }
+
+    }
+
+    public static String createDFSPTransferRequest(String originalMojaloopTransferRequest, String dfspPayeeAccount, String dfspHost, String dfspLedgerPort, String dfspConnectorAccountName){
+        try {
+            JsonPath jPathOriginalMojaloopTransferRequest = JsonPath.from(originalMojaloopTransferRequest);
+
+            return Json.createObjectBuilder()
+                    .add("id", "http://" + dfspHost + ":" + dfspLedgerPort + "/ledger/transfers/" + jPathOriginalMojaloopTransferRequest.getString("transferId"))
+                    .add("ledger", "http://" + dfspHost + ":" + dfspLedgerPort + "/ledger")
+                    .add("execution_condition", "ni:///sha-256;" + jPathOriginalMojaloopTransferRequest.getString("condition") + "?fpt=preimage-sha-256&cost=32")
+                    .add("expires_at", jPathOriginalMojaloopTransferRequest.getString("expiration"))
+                    .add("credits", Json.createArrayBuilder()
+                            .add(Json.createObjectBuilder()
+                                    .add("account", dfspPayeeAccount)
+                                    .add("amount", jPathOriginalMojaloopTransferRequest.getString("amount.amount"))
+                            )
+                    )
+                    .add("debits", Json.createArrayBuilder()
+                            .add(Json.createObjectBuilder()
+                                    .add("account", "http://" + dfspHost + ":" + dfspLedgerPort + "/ledger/accounts/" + dfspConnectorAccountName)
+                                    .add("amount", jPathOriginalMojaloopTransferRequest.getString("amount.amount"))
+                                    .add("authorized", true)
+                            )
+                    )
+                    .build()
+                    .toString();
+        } catch (Exception e){
+            log.info("Error in createDFSPTransferRequest: "+ExceptionUtils.getStackTrace(e));
+            throw e;
+        }
     }
 }

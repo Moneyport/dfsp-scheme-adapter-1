@@ -11,15 +11,15 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 
     <apikit:config name="mojaloop-config" raml="mojaloop.raml" consoleEnabled="false" doc:name="Router"/>
 
-    <http:request-config name="dfsp-api-http-config" host="${dfsp-host}" port="${dfsp-api.port}"
-                         doc:name="DFSP API Config" responseTimeout="30000" />
-    <http:request-config name="interop-router-configuration" host="${routing-service.host}" port="${routing-service.port}"
-                         doc:name="interop-router configuration" responseTimeout="30000">
-    </http:request-config>
-    <http:request-config name="overide-this-config" doc:name="Dummy config that should be overidden"/>
+    <!--<http:request-config name="dfsp-api-http-config" host="${dfsp-host}" port="${dfsp-api.port}"-->
+                         <!--doc:name="DFSP API Config" responseTimeout="30000" />-->
+    <!--<http:request-config name="interop-router-configuration" host="${routing-service.host}" port="${routing-service.port}"-->
+                         <!--doc:name="interop-router configuration" responseTimeout="30000">-->
+    <!--</http:request-config>-->
+    <!--<http:request-config name="overide-this-config" doc:name="Dummy config that should be overidden"/>-->
 
     <flow name="mojaloop-main">
-        <http:listener config-ref="api-httpListenerConfig" path="/dfsp/scheme/adapter/v1/*" doc:name="HTTP"/>
+        <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/v1/*" doc:name="HTTP"/>
         <apikit:router config-ref="mojaloop-config" doc:name="APIkit Router"/>
         <exception-strategy ref="apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy"/>
     </flow>
@@ -94,7 +94,10 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
     <flow name="put:/participants/{Type}/{ID}:application/json:mojaloop-config">
-        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        <set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Forwarded-For']"/>
+        <object-to-string-transformer/>
+        <expression-component doc:name="Post Participant">
+            <![CDATA[app.registry.syncAsyncMappingStore.addParticipant(flowVars.correlationId.trim(),payload)]]></expression-component>
     </flow>
     <flow name="delete:/participants/{Type}/{ID}/{SubId}:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
@@ -139,9 +142,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                 message="Response from dfsp: #[payload]"
                 category="com.pdp.interop.switch" doc:name="logger"/>
         <expression-component doc:name="Get Participant">
-            <![CDATA[payload = app.registry.utils.getMojaloopPartiesResponse(payload,flowVars.receiverId)]]></expression-component>
+            <![CDATA[payload = app.registry.utils.createMojaloopPartiesResponse(payload,flowVars.receiverId)]]></expression-component>
         <logger level="INFO"
-                message="Sending Request to PUT http://${routing-service.host}:${routing-service.port}/interop/switch/v1/parties/#[flowVars.receiverType]/#[flowVars.receiverId] Payload: #[payload]"
+                message="Sending Request to PUT http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/parties/#[flowVars.receiverType]/#[flowVars.receiverId] Payload: #[payload]"
                 category="com.pdp.interop.switch" doc:name="logger"/>
         <!--<http:request config-ref="interop-router-configuration"-->
                       <!--path="/interop/switch/v1/parties/#[message.inboundProperties.Type]/#[message.inboundProperties.ID]"-->
@@ -192,13 +195,101 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
     <flow name="post:/quotes:application/json:mojaloop-config">
+        <logger message="In POST /quotes: #[payload] " level="INFO" category="com.pdp.interop.mockfsp"
+                doc:name="Logger"/>
+        <flow-ref name="populate-outbound-properties"/>
+        <vm:outbound-endpoint exchange-pattern="one-way" path="PostQuotes" doc:name="VM"/>
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        <set-property propertyName="http.status" value="202" doc:name="Property"/>
+    </flow>
+    <flow name="dequeue-post:/quotes:application/json:mock-fsp-config">
+        <vm:inbound-endpoint exchange-pattern="one-way" address="vm://PostQuotes" doc:name="VM"/>
+        <object-to-string-transformer/>
+        <flow-ref name="populate-outbound-properties"/>
+        <set-property propertyName="X-Source-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"
+                      doc:name="Set X-Source-Identifier"/>
+        <set-property propertyName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"
+                      doc:name="Set X-Destination-Identifier"/>
+        <set-variable variableName="originalMojaloopQuotesRequest" value="#[payload]"/>
+        <expression-component doc:name="Generate DFSP Quotes Request">
+            <![CDATA[import io.restassured.path.json.JsonPath;
+                flowVars.quoteId = JsonPath.from(payload).getString("quoteId");]]></expression-component>
+        <expression-component doc:name="Generate DFSP Quotes Request">
+            <![CDATA[payload = app.registry.utils.createDFSPQuotesRequest(payload)]]></expression-component>
+        <logger level="INFO"
+                message="Posting request to Payee: http://${dfsp-host}:${dfsp-api.port}/quotes, method=post Payload: #[payload]"
+                category="com.l1p.interop.scheme.adapter.quote" doc:name="logger" />
+        <http:request config-ref="dfsp-api-http-config" path="/quotes" method="POST"
+                      doc:name="Call dfsp-api /quotes">
+            <http:request-builder>
+                <http:header headerName="Authorization" value="#['Basic ']${dfsp-api.auth_value}" />
+            </http:request-builder>
+            <http:success-status-code-validator values="200..599" />
+        </http:request>
+        <object-to-string-transformer/>
+        <logger level="INFO"
+                message="Response from DFSP /quotes: #[payload]"
+                category="com.l1p.interop.scheme.adapter.quote" doc:name="logger" />
+        <expression-component doc:name="Get Participant">
+            <![CDATA[payload = app.registry.utils.createMojaloopQuotesResponse(payload,flowVars.originalMojaloopQuotesRequest)]]></expression-component>
+        <logger level="INFO"
+                message="Sending Request to PUT http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/quotes/#[flowVars.quoteId] Payload: #[payload]"
+                category="com.pdp.interop.switch" doc:name="logger"/>
+        <!--<http:request config-ref="interop-router-configuration"-->
+        <!--path="/interop/switch/v1/parties/#[message.inboundProperties.Type]/#[message.inboundProperties.ID]"-->
+        <!--method="PUT" doc:name="HTTP">-->
+        <!--<http:success-status-code-validator values="200..599"/>-->
+        <!--</http:request>-->
     </flow>
     <flow name="post:/transactionRequests:application/json:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
     <flow name="post:/transfers:application/json:mojaloop-config">
-        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        <flow-ref name="populate-outbound-properties"/>
+        <vm:outbound-endpoint exchange-pattern="one-way" path="PostTransfers" doc:name="VM"/>
+        <set-property value="202" propertyName="http.status"/>
+    </flow>
+    <flow name="dequeue-post:/transfers:application/json:mojaloop-config">
+        <vm:inbound-endpoint exchange-pattern="one-way" address="vm://PostTransfers" doc:name="VM"/>
+        <flow-ref name="populate-outbound-properties"/>
+        <set-property propertyName="X-Source-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"
+                      doc:name="Set X-Source-Identifier"/>
+        <set-property propertyName="AaX-Destination-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"
+                      doc:name="Set X-Destination-Identifier"/>
+        <object-to-string-transformer/>
+        <set-variable variableName="originalMojaloopTransferRequest" value="#[payload]"/>
+        <expression-component doc:name="Get Data from Transfer Request">
+            <![CDATA[flowVars.transferMap = app.registry.utils.extractDataFromMojaloopTransferRequest(payload)]]></expression-component>
+        <set-variable variableName="transferId" value="#[flowVars.transferMap.transferId]"/>
+
+        <!-- Call dfsp-api for payee id to extract account details-->
+        <logger level="INFO"
+                message="Sending request for GET on http://${dfsp-host}:${dfsp-api.port}/receivers/#[flowVars.transferMap.payeeId]"
+                category="com.l1p.interop.scheme.adapter.fetch-payee" doc:name="logger" />
+        <http:request config-ref="dfsp-api-http-config" path="/receivers/#[flowVars.transferMap.payeeId]"
+                      method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:header headerName="Authorization" value="#['Basic ']${dfsp-api.auth_value}" />
+            </http:request-builder>
+            <http:success-status-code-validator values="200,400" />
+        </http:request>
+        <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
+        <logger level="INFO"
+                message="Response from DFSP for payeeId #[flowVars.transferMap.payeeId]: #[payload]"
+                category="com.pdp.interop.switch" doc:name="logger"/>
+        <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
+        <set-variable variableName="payeeAccount" value="#[payload.account]"/>
+
+        <expression-component doc:name="Get Data from Transfer Request">
+            <![CDATA[payload = app.registry.utils.createDFSPTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, ${dfsp-host}, ${dfsp-ledger.port},${dfsp-payee-connector.name})]]></expression-component>
+        <logger level="INFO"
+                message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId], method=put payload: #[payload]"
+                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger" />
+        <http:request config-ref="dfsp-ledger-http-config" path="/transfers/#[flowVars.transferId]"
+                      method="PUT" doc:name="HTTP">
+            <http:success-status-code-validator values="200..500" />
+        </http:request>
+
     </flow>
     <flow name="post:/participants/{Type}/{ID}/{SubId}:application/json:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>

@@ -33,6 +33,11 @@
 			<version>${interop-domain.version}</version>
             <type>zip</type>
         </dependency>
+		<dependency>
+			<groupId>com.interop.ilp.conditions</groupId>
+			<artifactId>interop-ilp-conditions</artifactId>
+			<version>1.5</version>
+		</dependency>
     </dependencies>
 
 </project>
