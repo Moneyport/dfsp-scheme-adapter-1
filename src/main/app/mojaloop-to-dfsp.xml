@@ -13,13 +13,6 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 
     <apikit:config name="mojaloop-config" raml="mojaloop.raml" consoleEnabled="false" doc:name="Router"/>
 
-    <!--<http:request-config name="dfsp-api-http-config" host="${dfsp-host}" port="${dfsp-api.port}"-->
-    <!--doc:name="DFSP API Config" responseTimeout="30000" />-->
-    <!--<http:request-config name="interop-router-configuration" host="${routing-service.host}" port="${routing-service.port}"-->
-    <!--doc:name="interop-router configuration" responseTimeout="30000">-->
-    <!--</http:request-config>-->
-    <!--<http:request-config name="overide-this-config" doc:name="Dummy config that should be overidden"/>-->
-
     <flow name="mojaloop-main">
         <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/v1/*" doc:name="HTTP"/>
         <apikit:router config-ref="mojaloop-config" doc:name="APIkit Router"/>
