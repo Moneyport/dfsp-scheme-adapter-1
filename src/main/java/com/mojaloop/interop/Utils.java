@@ -285,7 +285,17 @@ public class Utils {
         JsonPath jPathOriginalMojaloopTransferRequest = JsonPath.from(originalMojaloopTransferRequest);
         String ilpPacket = jPathOriginalMojaloopTransferRequest.getString("ilpPacket");
         IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
-        return ilpConditionHandlerImpl.generateFulfillment(ilpPacket,"secret".getBytes());
+        String rawFulfillment = ilpConditionHandlerImpl.generateFulfillment(ilpPacket,"secret".getBytes());
+
+        return rawFulfillment;
+
+//        byte[] FULFILLMENT_PREFIX = new byte[]{(byte) 0xA0, 0x22, (byte) 0x80, 0x20};
+//        byte[] bDecodedCryptoCondFulfillment = java.util.Base64.getUrlDecoder().decode(rawFulfillment);
+//        byte[] bRawFulfillment = new byte[bDecodedCryptoCondFulfillment.length - FULFILLMENT_PREFIX.length];
+//        System.arraycopy(bDecodedCryptoCondFulfillment, FULFILLMENT_PREFIX.length, bRawFulfillment, 0, bRawFulfillment.length);
+//        String strRawFulfillment = java.util.Base64.getUrlEncoder().encodeToString(bRawFulfillment);
+//
+//        return strRawFulfillment.substring(0,strRawFulfillment.length()-1);
 
     }
 

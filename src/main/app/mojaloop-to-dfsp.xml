@@ -3,18 +3,20 @@
       xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
       xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http"
       xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:json="http://www.mulesoft.org/schema/mule/json"
       xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
 http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
 
     <apikit:config name="mojaloop-config" raml="mojaloop.raml" consoleEnabled="false" doc:name="Router"/>
 
     <!--<http:request-config name="dfsp-api-http-config" host="${dfsp-host}" port="${dfsp-api.port}"-->
-                         <!--doc:name="DFSP API Config" responseTimeout="30000" />-->
+    <!--doc:name="DFSP API Config" responseTimeout="30000" />-->
     <!--<http:request-config name="interop-router-configuration" host="${routing-service.host}" port="${routing-service.port}"-->
-                         <!--doc:name="interop-router configuration" responseTimeout="30000">-->
+    <!--doc:name="interop-router configuration" responseTimeout="30000">-->
     <!--</http:request-config>-->
     <!--<http:request-config name="overide-this-config" doc:name="Dummy config that should be overidden"/>-->
 
@@ -127,31 +129,43 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                       doc:name="Variable"/>
         <set-variable variableName="receiverId" value="#[message.inboundProperties.ID]"
                       doc:name="Variable"/>
+
+        <!-- Storing headers as flow variables as the call to dfsp overides required headers-->
+        <set-variable variableName="X-Source-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"/>
+        <set-variable variableName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"/>
+
+        <!-- Making call to DFSP to get the party/receiver information-->
         <logger level="INFO"
                 message="Sending request for GET on http://${dfsp-host}:${dfsp-api.port}/receivers/#[message.inboundProperties.ID], Authorization=#['Basic ']${dfsp-api.auth_value}"
-                category="com.l1p.interop.scheme.adapter.fetch-payee" doc:name="logger" />
+                category="com.l1p.interop.scheme.adapter.fetch-payee" doc:name="logger"/>
         <http:request config-ref="dfsp-api-http-config" path="/receivers/#[message.inboundProperties.ID]"
                       method="GET" doc:name="HTTP">
             <http:request-builder>
-                <http:header headerName="Authorization" value="#['Basic ']${dfsp-api.auth_value}" />
+                <http:header headerName="Authorization" value="#['Basic ']${dfsp-api.auth_value}"/>
             </http:request-builder>
-            <http:success-status-code-validator values="200,400" />
+            <http:success-status-code-validator values="200,400"/>
         </http:request>
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
                 message="Response from dfsp: #[payload]"
                 category="com.pdp.interop.switch" doc:name="logger"/>
+
+        <!-- Making Callback to Mojaloop-->
         <expression-component doc:name="Get Participant">
             <![CDATA[payload = app.registry.utils.createMojaloopPartiesResponse(payload,flowVars.receiverId)]]></expression-component>
+        <set-property propertyName="X-Source-Identifier" value="#[flowVars.'X-Destination-Identifier']"/>
+        <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']"/>
+        <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
                 message="Sending Request to PUT http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/parties/#[flowVars.receiverType]/#[flowVars.receiverId] Payload: #[payload]"
                 category="com.pdp.interop.switch" doc:name="logger"/>
-        <!--<http:request config-ref="interop-router-configuration"-->
-                      <!--path="/interop/switch/v1/parties/#[message.inboundProperties.Type]/#[message.inboundProperties.ID]"-->
-                      <!--method="PUT" doc:name="HTTP">-->
-            <!--<http:success-status-code-validator values="200..599"/>-->
-        <!--</http:request>-->
+        <http:request config-ref="mojaloop-http-config"
+                      path="/parties/#[flowVars.receiverType]/#[flowVars.receiverId]"
+                      method="PUT" doc:name="HTTP">
+            <http:success-status-code-validator values="200..599"/>
+        </http:request>
     </flow>
+
     <flow name="get:/transactions/{ID}:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
@@ -206,11 +220,15 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <vm:inbound-endpoint exchange-pattern="one-way" address="vm://PostQuotes" doc:name="VM"/>
         <object-to-string-transformer/>
         <flow-ref name="populate-outbound-properties"/>
-        <set-property propertyName="X-Source-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"
-                      doc:name="Set X-Source-Identifier"/>
-        <set-property propertyName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"
-                      doc:name="Set X-Destination-Identifier"/>
+
+        <!-- Storing headers as flow variables as the call to dfsp overides required headers-->
+        <set-variable variableName="X-Source-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"/>
+        <set-variable variableName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"/>
+        <set-variable variableName="X-Forwarded-For" value="#[message.inboundProperties.'X-Forwarded-For']"/>
+
         <set-variable variableName="originalMojaloopQuotesRequest" value="#[payload]"/>
+
+        <!-- Making call to DFSP for Quotes-->
         <expression-component doc:name="Generate DFSP Quotes Request">
             <![CDATA[import io.restassured.path.json.JsonPath;
                 flowVars.quoteId = JsonPath.from(payload).getString("quoteId");]]></expression-component>
@@ -218,45 +236,52 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <![CDATA[payload = app.registry.utils.createDFSPQuotesRequest(payload)]]></expression-component>
         <logger level="INFO"
                 message="Posting request to Payee: http://${dfsp-host}:${dfsp-api.port}/quotes, method=post Payload: #[payload]"
-                category="com.l1p.interop.scheme.adapter.quote" doc:name="logger" />
+                category="com.l1p.interop.scheme.adapter.quote" doc:name="logger"/>
         <http:request config-ref="dfsp-api-http-config" path="/quotes" method="POST"
                       doc:name="Call dfsp-api /quotes">
             <http:request-builder>
-                <http:header headerName="Authorization" value="#['Basic ']${dfsp-api.auth_value}" />
+                <http:header headerName="Authorization" value="#['Basic ']${dfsp-api.auth_value}"/>
             </http:request-builder>
-            <http:success-status-code-validator values="200..599" />
+            <http:success-status-code-validator values="200..599"/>
         </http:request>
         <object-to-string-transformer/>
         <logger level="INFO"
                 message="Response from DFSP /quotes: #[payload]"
-                category="com.l1p.interop.scheme.adapter.quote" doc:name="logger" />
-        <expression-component doc:name="Get Participant">
+                category="com.l1p.interop.scheme.adapter.quote" doc:name="logger"/>
+
+        <!-- Making PUT callback to Mojaloop -->
+        <expression-component doc:name="Create Mojaloop Response">
             <![CDATA[payload = app.registry.utils.createMojaloopQuotesResponse(payload,flowVars.originalMojaloopQuotesRequest)]]></expression-component>
+        <set-property propertyName="X-Source-Identifier" value="#[flowVars.'X-Destination-Identifier']"/>
+        <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']"/>
+        <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']"/>
+        <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
                 message="Sending Request to PUT http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/quotes/#[flowVars.quoteId] Payload: #[payload]"
                 category="com.pdp.interop.switch" doc:name="logger"/>
-        <!--<http:request config-ref="interop-router-configuration"-->
-        <!--path="/interop/switch/v1/parties/#[message.inboundProperties.Type]/#[message.inboundProperties.ID]"-->
-        <!--method="PUT" doc:name="HTTP">-->
-        <!--<http:success-status-code-validator values="200..599"/>-->
-        <!--</http:request>-->
+        <http:request config-ref="mojaloop-http-config"
+                      path="/quotes/#[flowVars.quoteId]"
+                      method="PUT" doc:name="HTTP">
+            <http:success-status-code-validator values="200..599"/>
+        </http:request>
     </flow>
     <flow name="post:/transactionRequests:application/json:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
     <flow name="post:/transfers:application/json:mojaloop-config">
+        <object-to-string-transformer/>
         <flow-ref name="populate-outbound-properties"/>
         <vm:outbound-endpoint exchange-pattern="one-way" path="PostTransfers" doc:name="VM"/>
         <set-property value="202" propertyName="http.status"/>
     </flow>
     <flow name="dequeue-post:/transfers:application/json:mojaloop-config">
         <vm:inbound-endpoint exchange-pattern="one-way" address="vm://PostTransfers" doc:name="VM"/>
-        <flow-ref name="populate-outbound-properties"/>
+        <!--<flow-ref name="populate-outbound-properties"/>-->
+        <object-to-string-transformer/>
         <set-property propertyName="X-Source-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"
                       doc:name="Set X-Source-Identifier"/>
-        <set-property propertyName="AaX-Destination-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"
+        <set-property propertyName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"
                       doc:name="Set X-Destination-Identifier"/>
-        <object-to-string-transformer/>
         <set-variable variableName="originalMojaloopTransferRequest" value="#[payload]"/>
         <expression-component doc:name="Get Data from Transfer Request">
             <![CDATA[flowVars.transferMap = app.registry.utils.extractDataFromMojaloopTransferRequest(payload)]]></expression-component>
@@ -265,13 +290,13 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <!-- Call dfsp-api for payee id to extract account details-->
         <logger level="INFO"
                 message="Sending request for GET on http://${dfsp-host}:${dfsp-api.port}/receivers/#[flowVars.transferMap.payeeId]"
-                category="com.l1p.interop.scheme.adapter.fetch-payee" doc:name="logger" />
+                category="com.l1p.interop.scheme.adapter.fetch-payee" doc:name="logger"/>
         <http:request config-ref="dfsp-api-http-config" path="/receivers/#[flowVars.transferMap.payeeId]"
                       method="GET" doc:name="HTTP">
             <http:request-builder>
-                <http:header headerName="Authorization" value="#['Basic ']${dfsp-api.auth_value}" />
+                <http:header headerName="Authorization" value="#['Basic ']${dfsp-api.auth_value}"/>
             </http:request-builder>
-            <http:success-status-code-validator values="200,400" />
+            <http:success-status-code-validator values="200,400"/>
         </http:request>
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
@@ -281,37 +306,45 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-variable variableName="payeeAccount" value="#[payload.account]"/>
 
         <!--   Call DFSP Prepare Transfer-->
-        <expression-component doc:name="Get Data from Transfer Request">
-            <![CDATA[payload = app.registry.utils.createDFSPPrepareTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, ${dfsp-host}, ${dfsp-ledger.port},${dfsp-payee-connector.name})]]></expression-component>
+        <expression-component doc:name="Get Prepare Transfer Request">
+            <![CDATA[payload = app.registry.utils.createDFSPPrepareTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, "${dfsp-host}", "${dfsp-ledger.port}","${dfsp-payee-connector.name}")]]></expression-component>
         <logger level="INFO"
                 message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId], method=put payload: #[payload]"
-                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger" />
+                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger"/>
         <http:request config-ref="dfsp-ledger-http-config" path="/transfers/#[flowVars.transferId]"
                       method="PUT" doc:name="HTTP">
-            <http:success-status-code-validator values="200..500" />
+            <http:success-status-code-validator values="200..500"/>
         </http:request>
         <object-to-string-transformer/>
         <logger level="INFO"
                 message="Prepare Transfer response from DFSP: #[payload]"
-                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger" />
+                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger"/>
 
         <!--   Call DFSP Fulfill Transfer-->
         <expression-component doc:name="Get Data from Transfer Request">
             <![CDATA[payload = app.registry.utils.createDFSPFulfillTransferRequest(flowVars.originalMojaloopTransferRequest)]]></expression-component>
         <set-variable variableName="transferFulfillment" value="#[payload]"/>
+        <set-property propertyName="Content-Type" value="text/plain" doc:name="Property"/>
         <logger level="INFO"
                 message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId]/fulfillment, method=put payload: #[payload]"
-                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger" />
+                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger"/>
         <http:request config-ref="dfsp-ledger-http-config" path="/transfers/#[flowVars.transferId]/fulfillment"
                       method="PUT" doc:name="HTTP">
-            <http:success-status-code-validator values="200..500" />
+            <http:success-status-code-validator values="200..500"/>
         </http:request>
         <object-to-string-transformer/>
         <logger level="INFO"
                 message="Fulfill Transfer response from DFSP: #[payload]"
-                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger" />
+                category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger"/>
 
         <!-- Call Mojaloop Callback PUT for Fulfill Transfer-->
+        <expression-component doc:name="Get Data from Transfer Request">
+            <![CDATA[payload = app.registry.utils.createMojaloopFulfillTransferResponse(flowVars.transferFulfillment)]]></expression-component>
+        <http:request config-ref="mojaloop-http-config"
+                      path="/transfers/#[flowVars.transferId]"
+                      method="PUT" doc:name="HTTP">
+            <http:success-status-code-validator values="200..599"/>
+        </http:request>
 
     </flow>
     <flow name="post:/participants/{Type}/{ID}/{SubId}:application/json:mojaloop-config">
@@ -351,29 +384,29 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 
     <apikit:mapping-exception-strategy name="apiKitGlobalExceptionMapping">
         <apikit:mapping statusCode="404">
-            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException"/>
             <set-property propertyName="Content-Type" value="application/json"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" />
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }"/>
         </apikit:mapping>
         <apikit:mapping statusCode="405">
-            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException"/>
             <set-property propertyName="Content-Type" value="application/json"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" />
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }"/>
         </apikit:mapping>
         <apikit:mapping statusCode="415">
-            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException"/>
             <set-property propertyName="Content-Type" value="application/json"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" />
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }"/>
         </apikit:mapping>
         <apikit:mapping statusCode="406">
-            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException"/>
             <set-property propertyName="Content-Type" value="application/json"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" />
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }"/>
         </apikit:mapping>
         <apikit:mapping statusCode="400">
-            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException"/>
             <set-property propertyName="Content-Type" value="application/json"/>
-            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" />
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }"/>
         </apikit:mapping>
     </apikit:mapping-exception-strategy>
 </mule>
