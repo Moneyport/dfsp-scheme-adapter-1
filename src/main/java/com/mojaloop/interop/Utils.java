@@ -287,21 +287,25 @@ public class Utils {
         IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
         String rawFulfillment = ilpConditionHandlerImpl.generateFulfillment(ilpPacket,"secret".getBytes());
 
-        return rawFulfillment;
+        byte[] FULFILLMENT_PREFIX = new byte[]{(byte) 0xA0, 0x22, (byte) 0x80, 0x20};
+        byte[] bDecodedFulfillment = java.util.Base64.getUrlDecoder().decode(rawFulfillment);
+        byte[] newFulfillment = new byte[FULFILLMENT_PREFIX.length + bDecodedFulfillment.length];
 
-//        byte[] FULFILLMENT_PREFIX = new byte[]{(byte) 0xA0, 0x22, (byte) 0x80, 0x20};
-//        byte[] bDecodedCryptoCondFulfillment = java.util.Base64.getUrlDecoder().decode(rawFulfillment);
-//        byte[] bRawFulfillment = new byte[bDecodedCryptoCondFulfillment.length - FULFILLMENT_PREFIX.length];
-//        System.arraycopy(bDecodedCryptoCondFulfillment, FULFILLMENT_PREFIX.length, bRawFulfillment, 0, bRawFulfillment.length);
-//        String strRawFulfillment = java.util.Base64.getUrlEncoder().encodeToString(bRawFulfillment);
-//
-//        return strRawFulfillment.substring(0,strRawFulfillment.length()-1);
+        System.arraycopy(FULFILLMENT_PREFIX, 0, newFulfillment, 0, FULFILLMENT_PREFIX.length);
+        System.arraycopy(bDecodedFulfillment, 0, newFulfillment, FULFILLMENT_PREFIX.length, bDecodedFulfillment.length);
+
+        return java.util.Base64.getUrlEncoder().encodeToString(newFulfillment);
 
     }
 
-    public static String createMojaloopFulfillTransferResponse(String fulfillment){
+    public static String createMojaloopFulfillTransferResponse(String originalMojaloopTransferRequest){
+        JsonPath jPathOriginalMojaloopTransferRequest = JsonPath.from(originalMojaloopTransferRequest);
+        String ilpPacket = jPathOriginalMojaloopTransferRequest.getString("ilpPacket");
+        IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
+        String rawFulfillment = ilpConditionHandlerImpl.generateFulfillment(ilpPacket,"secret".getBytes());
+
         return Json.createObjectBuilder()
-                        .add("fulfilment",fulfillment)
+                        .add("fulfilment",rawFulfillment)
                         .add("transferState","COMMITTED")
                         .build()
                         .toString();

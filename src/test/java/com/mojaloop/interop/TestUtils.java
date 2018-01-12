@@ -5,6 +5,7 @@ import junit.framework.TestCase;
 import org.junit.Test;
 import org.junit.runners.model.TestClass;
 
+import java.util.Base64;
 import java.util.logging.Logger;
 
 
@@ -30,16 +31,19 @@ public class TestUtils extends TestCase {
 
     public void testFulfillment(){
         IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
-        String rawFulfillment = ilpConditionHandlerImpl.generateFulfillment("AQAAAAAAAABkCnByaXZhdGUuMjGCAkl7InRyYW5zYWN0aW9uSWQiOiIxNjY4N2NjOS0zNDM5LTQxZTgtYTI3MC1lZDA2MmRhYTYzMjgiLCJxdW90ZUlkIjoiMWRmM2M3ZGYtOGIzZS00ZDM4LTk1NzktZWNjOGJlMTJiMWZiIiwicGF5ZWUiOnsicGFydHlJZEluZm8iOnsicGFydHlJZFR5cGUiOiJNU0lTRE4iLCJwYXJ0eUlkZW50aWZpZXIiOiIyNzcxMzgwMzkwNSIsImZzcElkIjoiMjEifSwicGVyc29uYWxJbmZvIjp7ImNvbXBsZXhOYW1lIjp7fX19LCJwYXllciI6eyJwYXJ0eUlkSW5mbyI6eyJwYXJ0eUlkVHlwZSI6Ik1TSVNETiIsInBhcnR5SWRlbnRpZmllciI6IjI1NjIwMTAwMDAxIiwiZnNwSWQiOiIyMCJ9LCJwZXJzb25hbEluZm8iOnsiY29tcGxleE5hbWUiOnsiZmlyc3ROYW1lIjoiTWF0cyIsImxhc3ROYW1lIjoiSGFnbWFuIn19fSwiYW1vdW50Ijp7ImN1cnJlbmN5IjoiVVNEIiwiYW1vdW50IjoiMTAwIn0sInRyYW5zYWN0aW9uVHlwZSI6eyJzY2VuYXJpbyI6IlRSQU5TRkVSIiwic3ViU2NlbmFyaW8iOiJUUkFOU0ZFUiIsImluaXRpYXRvciI6IlBBWUVSIiwiaW5pdGlhdG9yVHlwZSI6IkNPTlNVTUVSIiwicmVmdW5kSW5mbyI6e319LCJub3RlIjoiaGVqIn0=","secret".getBytes());
+        //String rawFulfillment = ilpConditionHandlerImpl.generateFulfillment("AQAAAAAAAABkCnByaXZhdGUuMjGCAkl7InRyYW5zYWN0aW9uSWQiOiIxNjY4N2NjOS0zNDM5LTQxZTgtYTI3MC1lZDA2MmRhYTYzMjgiLCJxdW90ZUlkIjoiMWRmM2M3ZGYtOGIzZS00ZDM4LTk1NzktZWNjOGJlMTJiMWZiIiwicGF5ZWUiOnsicGFydHlJZEluZm8iOnsicGFydHlJZFR5cGUiOiJNU0lTRE4iLCJwYXJ0eUlkZW50aWZpZXIiOiIyNzcxMzgwMzkwNSIsImZzcElkIjoiMjEifSwicGVyc29uYWxJbmZvIjp7ImNvbXBsZXhOYW1lIjp7fX19LCJwYXllciI6eyJwYXJ0eUlkSW5mbyI6eyJwYXJ0eUlkVHlwZSI6Ik1TSVNETiIsInBhcnR5SWRlbnRpZmllciI6IjI1NjIwMTAwMDAxIiwiZnNwSWQiOiIyMCJ9LCJwZXJzb25hbEluZm8iOnsiY29tcGxleE5hbWUiOnsiZmlyc3ROYW1lIjoiTWF0cyIsImxhc3ROYW1lIjoiSGFnbWFuIn19fSwiYW1vdW50Ijp7ImN1cnJlbmN5IjoiVVNEIiwiYW1vdW50IjoiMTAwIn0sInRyYW5zYWN0aW9uVHlwZSI6eyJzY2VuYXJpbyI6IlRSQU5TRkVSIiwic3ViU2NlbmFyaW8iOiJUUkFOU0ZFUiIsImluaXRpYXRvciI6IlBBWUVSIiwiaW5pdGlhdG9yVHlwZSI6IkNPTlNVTUVSIiwicmVmdW5kSW5mbyI6e319LCJub3RlIjoiaGVqIn0=","secret".getBytes());
         //log.info("isMatching: "+ilpConditionHandlerImpl.validateFulfillmentAgainstCondition(fulfillment,"VA4oEYqWhtUrJmSAwa5xLuOIeKgo4ZFhRP4klOggz8c"));
 
+        String rawFulfillment = "XgEQqmtuZXUNV_P7Xflh9FJaANzQkhQ7ue1uSPZSUA0";
         byte[] FULFILLMENT_PREFIX = new byte[]{(byte) 0xA0, 0x22, (byte) 0x80, 0x20};
-        byte[] bDecodedCryptoCondFulfillment = java.util.Base64.getUrlDecoder().decode(rawFulfillment);
-        byte[] bRawFulfillment = new byte[bDecodedCryptoCondFulfillment.length - FULFILLMENT_PREFIX.length];
-        System.arraycopy(bDecodedCryptoCondFulfillment, FULFILLMENT_PREFIX.length, bRawFulfillment, 0, bRawFulfillment.length);
-        String strRawFulfillment = java.util.Base64.getUrlEncoder().encodeToString(bRawFulfillment);
+        byte[] bDecodedFulfillment = Base64.getUrlDecoder().decode(rawFulfillment);
+        byte[] newFulfillment = new byte[FULFILLMENT_PREFIX.length + bDecodedFulfillment.length];
 
-        log.info(strRawFulfillment.substring(0,strRawFulfillment.length()-1));
+        System.arraycopy(FULFILLMENT_PREFIX, 0, newFulfillment, 0, FULFILLMENT_PREFIX.length);
+        System.arraycopy(bDecodedFulfillment, 0, newFulfillment, FULFILLMENT_PREFIX.length, bDecodedFulfillment.length);
 
+        log.info(Base64.getUrlEncoder().encodeToString(newFulfillment));
+
+        
     }
 }

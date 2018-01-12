@@ -15,6 +15,10 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 
     <flow name="mojaloop-main">
         <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/v1/*" doc:name="HTTP"/>
+        <logger level="INFO"
+                message="Received request at method=#[message.inboundProperties.'http.method'], url=http://#[message.inboundProperties.'host'+message.inboundProperties.'http.request.path'], Payload=#[message.payloadAs(java.lang.String)]; Headers :: X-Source-Identifier: #[message.inboundProperties.'X-Source-Identifier'], X-Destination-Identifier: #[message.inboundProperties.'X-Destination-Identifier'], Accept: #[message.inboundProperties.'Accept'], Date: #[message.inboundProperties.'Date'], Content-Type: #[message.inboundProperties.'Content-Type']"
+                category="com.l1p.interop.routing" doc:name="logger"/>
+        <component class="com.mojaloop.interop.OverideInboundProperties" doc:name="OverideInboundProperties"/>
         <apikit:router config-ref="mojaloop-config" doc:name="APIkit Router"/>
         <exception-strategy ref="apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy"/>
     </flow>
@@ -271,10 +275,11 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <vm:inbound-endpoint exchange-pattern="one-way" address="vm://PostTransfers" doc:name="VM"/>
         <!--<flow-ref name="populate-outbound-properties"/>-->
         <object-to-string-transformer/>
-        <set-property propertyName="X-Source-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"
-                      doc:name="Set X-Source-Identifier"/>
-        <set-property propertyName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"
-                      doc:name="Set X-Destination-Identifier"/>
+        <!-- Storing headers as flow variables as the call to dfsp overides required headers-->
+        <set-variable variableName="X-Source-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"/>
+        <set-variable variableName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"/>
+        <set-variable variableName="X-Forwarded-For" value="#[message.inboundProperties.'X-Forwarded-For']"/>
+
         <set-variable variableName="originalMojaloopTransferRequest" value="#[payload]"/>
         <expression-component doc:name="Get Data from Transfer Request">
             <![CDATA[flowVars.transferMap = app.registry.utils.extractDataFromMojaloopTransferRequest(payload)]]></expression-component>
@@ -316,7 +321,6 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <!--   Call DFSP Fulfill Transfer-->
         <expression-component doc:name="Get Data from Transfer Request">
             <![CDATA[payload = app.registry.utils.createDFSPFulfillTransferRequest(flowVars.originalMojaloopTransferRequest)]]></expression-component>
-        <set-variable variableName="transferFulfillment" value="#[payload]"/>
         <set-property propertyName="Content-Type" value="text/plain" doc:name="Property"/>
         <logger level="INFO"
                 message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId]/fulfillment, method=put payload: #[payload]"
@@ -332,7 +336,14 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 
         <!-- Call Mojaloop Callback PUT for Fulfill Transfer-->
         <expression-component doc:name="Get Data from Transfer Request">
-            <![CDATA[payload = app.registry.utils.createMojaloopFulfillTransferResponse(flowVars.transferFulfillment)]]></expression-component>
+            <![CDATA[payload = app.registry.utils.createMojaloopFulfillTransferResponse(flowVars.originalMojaloopTransferRequest)]]></expression-component>
+        <set-property propertyName="X-Source-Identifier" value="#[flowVars.'X-Destination-Identifier']"/>
+        <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']"/>
+        <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']"/>
+        <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
+        <logger level="INFO"
+                message="Sending Request to PUT http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/transfers/#[flowVars.transferId] Payload: #[payload]"
+                category="com.pdp.interop.switch" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/transfers/#[flowVars.transferId]"
                       method="PUT" doc:name="HTTP">
