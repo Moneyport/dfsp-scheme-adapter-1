@@ -3,13 +3,18 @@ package com.mojaloop.interop;
 import com.ilp.conditions.impl.IlpConditionHandlerImpl;
 import com.ilp.conditions.models.pdp.*;
 import io.restassured.path.json.JsonPath;
+import org.apache.http.client.utils.DateUtils;
 import org.mule.util.Base64;
 import org.mule.util.ExceptionUtils;
+import org.mule.util.UUID;
 
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import java.io.StringReader;
 import java.nio.charset.Charset;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
@@ -74,6 +79,47 @@ public class Utils {
                 )
         ).build().toString();
 
+    }
+
+    public static String createDFSPGetResourcesResponse(String mlPartiesResponse, String authorization,String dfspHost,String dfspPort){
+        JsonObject objMLPartiesResponse = Json.createReader(new StringReader(mlPartiesResponse)).readObject();
+        String fullName = objMLPartiesResponse.getString("party.personalInfo.complexName.firstName")+" "+ objMLPartiesResponse.getString("party.personalInfo.complexName.lastName");
+        String account = "http://"+dfspHost+":"+dfspPort+"/accounts/"+objMLPartiesResponse.getString("party.personalInfo.complexName.lastName");
+
+        JsonObject dfspDetails = Json.createObjectBuilder()
+                                                    .add("type","payee")
+                                                    .add("name",fullName)
+                                                    .add("firstName",objMLPartiesResponse.getString("party.personalInfo.complexName.firstName"))
+                                                    .add("lastName",objMLPartiesResponse.getString("party.personalInfo.complexName.lastName"))
+                                                    .add("nationalId","")
+                                                    .add("dob",objMLPartiesResponse.getString("party.personalInfo.dateOfBirth"))
+                                                    .add("account",account)
+                                                    .add("currencyCode","TZS")
+                                                    .add("currencySymbol","TSh")
+                                                    .add("imageUrl","https://red.ilpdemo.org/api/receivers/alice_cooper/profile_pic.jpg")
+                                                    .build();
+
+        JsonObject fraudDetails = Json.createObjectBuilder()
+                                                    .add("id", UUID.getUUID())
+                                                    .add("score",0)
+                                                    .add("createdDate",DateUtils.formatDate(Calendar.getInstance().getTime(),"YYYY-MM-DDTHH:mm:ss.SSSZ"))
+                                                    .build();
+
+        JsonArray directoryDetails = Json.createArrayBuilder()
+                                                    .add(Json.createObjectBuilder()
+                                                                            .add("name",objMLPartiesResponse.getString("party.partyIdInfo.fspId"))
+                                                                            .add("shortName",objMLPartiesResponse.getString("party.partyIdInfo.fspId"))
+                                                                            .add("providerUrl","http://"+dfspHost+":8088/scheme/adapter/v1")
+                                                                            .add("primary",true)
+                                                                            .add("registered",true)
+                                                    )
+                                                    .build();
+        return Json.createObjectBuilder()
+                            .add("dfsp_details",dfspDetails)
+                            .add("fraud_details",fraudDetails)
+                            .add("directory_details",directoryDetails)
+                            .build()
+                            .toString();
     }
 
 

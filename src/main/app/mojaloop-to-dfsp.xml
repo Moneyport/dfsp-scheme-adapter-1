@@ -63,7 +63,10 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
     <flow name="put:/parties/{Type}/{ID}:application/json:mojaloop-config">
-        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        <set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Forwarded-For']"/>
+        <object-to-string-transformer/>
+        <expression-component doc:name="Post Participant">
+            <![CDATA[app.registry.syncAsyncMappingStore.addParticipant(flowVars.correlationId.trim(),payload)]]></expression-component>
     </flow>
     <flow name="put:/transactions/{ID}:application/json:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
@@ -130,6 +133,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <!-- Storing headers as flow variables as the call to dfsp overides required headers-->
         <set-variable variableName="X-Source-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"/>
         <set-variable variableName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"/>
+        <set-variable variableName="X-Forwarded-For" value="#[message.inboundProperties.'X-Forwarded-For']"/>
 
         <!-- Making call to DFSP to get the party/receiver information-->
         <logger level="INFO"
@@ -152,6 +156,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <![CDATA[payload = app.registry.utils.createMojaloopPartiesResponse(payload,flowVars.receiverId)]]></expression-component>
         <set-property propertyName="X-Source-Identifier" value="#[flowVars.'X-Destination-Identifier']"/>
         <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']"/>
+        <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']"/>
+
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
                 message="Sending Request to PUT http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/parties/#[flowVars.receiverType]/#[flowVars.receiverId] Payload: #[payload]"

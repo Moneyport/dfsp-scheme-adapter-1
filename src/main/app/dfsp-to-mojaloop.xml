@@ -37,7 +37,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
 
     <flow name="post:/resources">
-        <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/resources"
+        <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/resources" allowedMethods="POST"
                        doc:name="HTTP"/>
         <object-to-string-transformer/>
         <expression-component doc:name="Get Participant">
@@ -47,18 +47,51 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-payload value="#[flowVars.retMap.addParticipantsRequest]"/>
         <logger level="INFO"
                 message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/participants/#[flowVars.retMap.identifierType]/#[flowVars.retMap.identifier] method:post payload: #[message.payloadAs(java.lang.String)] CorrelationId: #[flowVars.correlationId]"
-                category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger" />
+                category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
-                      path="/participants/#[flowVars.retMap.identifierType]/#[flowVars.retMap.identifier]" method="POST" doc:name="Call account-lookup /participants">
+                      path="/participants/#[flowVars.retMap.identifierType]/#[flowVars.retMap.identifier]" method="POST"
+                      doc:name="Call account-lookup /participants">
             <http:request-builder>
-                <http:header headerName="X-Source-Identifier" value="#[flowVars.retMap.dfspName]" />
-                <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]" />
+                <http:header headerName="X-Source-Identifier" value="#[flowVars.retMap.dfspName]"/>
+                <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
             </http:request-builder>
             <http:success-status-code-validator values="200..599"/>
         </http:request>
         <set-payload value="#[flowVars.retMap.resourceResponse]"/>
         <!--<expression-component doc:name="Get Participant">-->
-            <!--<![CDATA[payload = app.registry.syncAsyncMappingStore.getParticipant(flowVars.correlationId.trim())]]></expression-component>-->
+        <!--<![CDATA[payload = app.registry.syncAsyncMappingStore.getParticipant(flowVars.correlationId.trim())]]></expression-component>-->
+    </flow>
+
+    <flow name="get:/resources:central-directory-api-config">
+        <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/resources" allowedMethods="GET"
+                       doc:name="HTTP"/>
+        <object-to-string-transformer/>
+        <set-variable variableName="authorization"
+                      value="#[message.inboundProperties.authorization]" doc:name="Save authorization"/>
+        <set-variable variableName="partyId"
+                      value="#[message.inboundProperties.'http.query.params'.identifier.substring(4)]"
+                      doc:name="Save identifier"/>
+        <set-variable variableName="correlationId" value="#[function:uuid] "/>
+        <logger level="INFO"
+                message="Sending request to GET http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/parties/MSISDN/#[flowVars.partyId]"
+                category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
+        <http:request config-ref="mojaloop-http-config"
+                      path="/parties/#[flowVars.partyId]" method="GET" doc:name="Call switch /parties">
+            <http:request-builder>
+                <http:header headerName="X-Source-Identifier"
+                             value="#[message.inboundProperties.'X-Source-Identifier']"/>
+                <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
+            </http:request-builder>
+            <http:success-status-code-validator values="200..599"/>
+        </http:request>
+
+        <expression-component doc:name="Get Participant">
+            <![CDATA[Thread.sleep(1000)]]></expression-component>
+        <expression-component doc:name="Get Participant">
+            <![CDATA[flowVars.payeeDetails = app.registry.syncAsyncMappingStore.getParticipant(flowVars.correlationId.trim())]]></expression-component>
+        <expression-component doc:name="Generate response">
+            <![CDATA[flowVars.retMap = app.registry.utils.createAddParticipantRequest(payload,message.inboundProperties.authorization)]]></expression-component>
+
     </flow>
 
     <catch-exception-strategy name="interop-catch-exception-strategy">
