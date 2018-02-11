@@ -1,6 +1,7 @@
 package com.mojaloop.interop;
 
 import com.ilp.conditions.impl.IlpConditionHandlerImpl;
+import io.restassured.path.json.JsonPath;
 import junit.framework.TestCase;
 import org.junit.Test;
 import org.junit.runners.model.TestClass;
@@ -50,5 +51,10 @@ public class TestUtils extends TestCase {
     public void testcreateDFSPGetResourcesResponse() {
         String data = "{\"party\":{\"partyIdInfo\":{\"partyIdType\":\"MSISDN\",\"partyIdentifier\":\"27213971461\"},\"name\":\"alice cooper\",\"personalInfo\":{\"complexName\":{\"firstName\":\"alice\",\"lastName\":\"cooper\"},\"dateOfBirth\":\"1989-03-22\"}}}";
         Utils.createDFSPGetResourcesResponse(data,"dfsp1","localhost","8014");
+    }
+
+    public void testDFSPGetQuotesRequest(){
+        String data = "{\"quoteId\":\"c61cf17c-0c60-4147-8124-8ebe4729ade5\",\"transactionId\":\"c61cf17c-0c60-4147-8124-8ebe4729ade5\",\"payer\":{\"partyIdInfo\":{\"partyIdentifier\":\"14614767\",\"partyIdType\":\"MSISDN\"}},\"payee\":{\"partyIdInfo\":{\"partyIdentifier\":\"27213971461\",\"partyIdType\":\"MSISDN\"}},\"amount\":{\"amount\":\"1200\",\"currency\":\"USD\"},\"amountType\":\"SEND\",\"transactionType\":{\"scenario\":\"DEPOSIT\",\"initiator\":\"PAYER\",\"initiatorType\":\"CONSUMER\"}}";
+        Utils.createDFSPQuotesRequest(data);
     }
 }

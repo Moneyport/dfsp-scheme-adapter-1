@@ -14,7 +14,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     <apikit:config name="mojaloop-config" raml="mojaloop.raml" consoleEnabled="false" doc:name="Router"/>
 
     <flow name="mojaloop-main">
-        <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/v1/*" doc:name="HTTP"/>
+        <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/ml-dfsp/v1/*" doc:name="HTTP"/>
         <logger level="INFO"
                 message="Received request at method=#[message.inboundProperties.'http.method'], url=http://#[message.inboundProperties.'host'+message.inboundProperties.'http.request.path'], Payload=#[message.payloadAs(java.lang.String)]; Headers :: X-Source-Identifier: #[message.inboundProperties.'X-Source-Identifier'], X-Destination-Identifier: #[message.inboundProperties.'X-Destination-Identifier'], Accept: #[message.inboundProperties.'Accept'], Date: #[message.inboundProperties.'Date'], Content-Type: #[message.inboundProperties.'Content-Type']"
                 category="com.l1p.interop.routing" doc:name="logger"/>
@@ -212,8 +212,6 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
     <flow name="post:/quotes:application/json:mojaloop-config">
-        <logger message="In POST /quotes: #[payload] " level="INFO" category="com.pdp.interop.mockfsp"
-                doc:name="Logger"/>
         <flow-ref name="populate-outbound-properties"/>
         <vm:outbound-endpoint exchange-pattern="one-way" path="PostQuotes" doc:name="VM"/>
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
@@ -221,7 +219,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
     <flow name="dequeue-post:/quotes:application/json:mock-fsp-config">
         <vm:inbound-endpoint exchange-pattern="one-way" address="vm://PostQuotes" doc:name="VM"/>
-        <object-to-string-transformer/>
+        <object-to-string-transformer mimeType="application/json"/>
         <flow-ref name="populate-outbound-properties"/>
 
         <!-- Storing headers as flow variables as the call to dfsp overides required headers-->
@@ -230,11 +228,14 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-variable variableName="X-Forwarded-For" value="#[message.inboundProperties.'X-Forwarded-For']"/>
 
         <set-variable variableName="originalMojaloopQuotesRequest" value="#[payload]"/>
-
+        <logger message="In dequeue-post /quotes: #[payload] " level="INFO" category="com.pdp.interop.mockfsp"
+                doc:name="Logger"/>
         <!-- Making call to DFSP for Quotes-->
-        <expression-component doc:name="Generate DFSP Quotes Request">
-            <![CDATA[import io.restassured.path.json.JsonPath;
-                flowVars.quoteId = JsonPath.from(payload).getString("quoteId");]]></expression-component>
+        <!--<expression-component doc:name="Generate DFSP Quotes Request">-->
+            <!--<![CDATA[import io.restassured.path.json.JsonPath;-->
+                <!--flowVars.quoteId = JsonPath.from(payload.trim()).getString('quoteId');]]></expression-component>-->
+        <json:json-to-object-transformer returnClass="java.util.HashMap"/>
+        <set-variable variableName="originalMojaloopQuotesRequestMap" value="#[payload]"/>
         <expression-component doc:name="Generate DFSP Quotes Request">
             <![CDATA[payload = app.registry.utils.createDFSPQuotesRequest(payload)]]></expression-component>
         <logger level="INFO"
@@ -247,7 +248,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             </http:request-builder>
             <http:success-status-code-validator values="200..599"/>
         </http:request>
-        <object-to-string-transformer/>
+        <object-to-string-transformer mimeType="application/json"/>
+
         <logger level="INFO"
                 message="Response from DFSP /quotes: #[payload]"
                 category="com.l1p.interop.scheme.adapter.quote" doc:name="logger"/>

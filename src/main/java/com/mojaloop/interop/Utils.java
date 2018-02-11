@@ -131,6 +131,7 @@ public class Utils {
 
     public static String createDFSPQuotesRequest(String mojaloopQuotesRequest){
         try {
+            log.info("mojaloopQuotesRequest:"+mojaloopQuotesRequest);
             JsonPath jPath = JsonPath.from(mojaloopQuotesRequest);
             return Json.createObjectBuilder()
                     .add("paymentId", jPath.getString("quoteId"))
@@ -152,53 +153,227 @@ public class Utils {
                     .build()
                     .toString();
         }catch (Exception e){
-            log.info("Error in createDFSPQuotesRequest:"+ ExceptionUtils.getStackTrace(e));
+            log.info("Error in createDFSPQuotesRequest:"+ org.apache.commons.lang.exception.ExceptionUtils.getFullStackTrace(e));
             throw e;
         }
     }
 
+    public static String createDFSPQuotesRequest(HashMap mojaloopQuotesRequestMap){
+        try {
+
+            HashMap payer = (HashMap)mojaloopQuotesRequestMap.get("payer");
+            HashMap payerPartyIdInfo = (HashMap)payer.get("partyIdInfo");
+
+            HashMap payee = (HashMap)mojaloopQuotesRequestMap.get("payee");
+            HashMap payeePartyIdInfo = (HashMap)payer.get("partyIdInfo");
+
+            HashMap amount = (HashMap)mojaloopQuotesRequestMap.get("amount");
+
+            return Json.createObjectBuilder()
+                    .add("paymentId", (String)mojaloopQuotesRequestMap.get("quoteId"))
+                    .add("payer", Json.createObjectBuilder()
+                            .add("identifier", (String)payerPartyIdInfo.get("partyIdentifier"))
+                            .add("identifierType", "eur")
+                    )
+                    .add("payee", Json.createObjectBuilder()
+                            .add("identifier", (String)payeePartyIdInfo.get("partyIdentifier"))
+                            .add("identifierType", "eur")
+                            .add("account","http://host/ledger/accounts/alice")
+                    )
+                    .add("transferType", "p2p")
+                    .add("amountType", "SEND")
+                    .add("amount", Json.createObjectBuilder()
+                            .add("amount", (String)amount.get("amount"))
+                            .add("currency", (String)amount.get("currency"))
+                    )
+                    .build()
+                    .toString();
+        }catch (Exception e){
+            log.info("Error in createDFSPQuotesRequest:"+ org.apache.commons.lang.exception.ExceptionUtils.getFullStackTrace(e));
+            throw e;
+        }
+    }
+
+    public static String createMojaloopQuotesRequest(String dfspQuotesRequest){
+        try {
+            JsonPath jPath = JsonPath.from(dfspQuotesRequest);
+            return Json.createObjectBuilder()
+                            .add("quoteId",jPath.getString("paymentId"))
+                            .add("transactionId",jPath.getString("paymentId"))
+                            .add("payer", Json.createObjectBuilder()
+                                    .add("partyIdInfo",Json.createObjectBuilder()
+                                            .add("partyIdentifier",jPath.getString("payer.identifier"))
+                                            .add("partyIdType","MSISDN")
+                                    )
+                            )
+                            .add("payee", Json.createObjectBuilder()
+                                    .add("partyIdInfo",Json.createObjectBuilder()
+                                            .add("partyIdentifier",jPath.getString("payee.identifier"))
+                                            .add("partyIdType","MSISDN")
+                                    )
+                            )
+                            .add("amount",Json.createObjectBuilder()
+                                    .add("amount",jPath.getString("amount.amount"))
+                                    .add("currency","USD")
+                            )
+                            .add("amountType","SEND")
+                            .add("transactionType", Json.createObjectBuilder()
+                                    .add("scenario","DEPOSIT")
+                                    .add("initiator","PAYER")
+                                    .add("initiatorType","CONSUMER")
+                            )
+                            .build()
+                            .toString();
+
+        } catch(Exception e){
+            log.info("Error in createMojaloopQuotesRequest: "+ExceptionUtils.getStackTrace(e));
+        }
+        return null;
+    }
+
+//    public static String createMojaloopQuotesResponse(String dfspQuotesResponse,String originalMojaloopQuotesRequest) throws Exception {
+//
+//        try {
+//            JsonPath jPathDfspQuotesResponse = JsonPath.from(dfspQuotesResponse);
+//            JsonPath jPathOriginalMojaloopQuotesRequest = JsonPath.from(originalMojaloopQuotesRequest);
+//
+//
+//            log.info("originalMojaloopQuotesRequest: "+originalMojaloopQuotesRequest);
+//            //String fspId = jPathOriginalMojaloopQuotesRequest.getString("payee.partyIdInfo.fspId");
+//            String amountStr = jPathOriginalMojaloopQuotesRequest.get("amount.amount");
+//            //String ilpAddress = "private.".concat(fspId);
+//            String ilpAddress = "private.".concat("dfsp2");
+//            long amount = (long) Double.parseDouble(amountStr);
+//
+//            Transaction transaction = populateTransactionWithQuote(jPathOriginalMojaloopQuotesRequest);
+//
+//            log.info("IlpAddress: " + ilpAddress + " Amount: " + amount + " and Transaction: " + transaction.toString());
+//
+//            //Call interop-ilp-conditions jar getIlpPacket()
+//            IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
+//            String ilpPacket = ilpConditionHandlerImpl.getILPPacket(ilpAddress, amount, transaction);
+//
+//            //Call interop-ilp-conditions jar generateCondition()
+//            byte[] secret = "secret".getBytes();
+//            String ilpCondition = ilpConditionHandlerImpl.generateCondition(ilpPacket, secret);
+//
+//            return Json.createObjectBuilder()
+//                    .add("transferAmount", Json.createObjectBuilder()
+//                            .add("amount", jPathOriginalMojaloopQuotesRequest.getString("amount.amount"))
+//                            .add("currency", jPathOriginalMojaloopQuotesRequest.getString("amount.currency"))
+//                    )
+//                    .add("payeeFspFee", Json.createObjectBuilder()
+//                            .add("amount", jPathDfspQuotesResponse.getString("payeeFee.amount"))
+//                            .add("currency", jPathDfspQuotesResponse.getString("payeeFee.currency"))
+//                    )
+//                    .add("payeeFspCommission", Json.createObjectBuilder()
+//                            .add("amount", jPathDfspQuotesResponse.getString("payeeCommission.amount"))
+//                            .add("currency", jPathDfspQuotesResponse.getString("payeeCommission.currency"))
+//                    )
+//                    .add("expiration", jPathDfspQuotesResponse.getString("expiresAt"))
+//                    .add("ilpPacket", ilpPacket)
+//                    .add("condition", ilpCondition)
+//                    .build()
+//                    .toString();
+//        }catch (Exception e){
+//            log.info("Error in createMojaloopQuotesResponse: "+ org.apache.commons.lang.exception.ExceptionUtils.getFullStackTrace(e));
+//            throw e;
+//        }
+//    }
+
     public static String createMojaloopQuotesResponse(String dfspQuotesResponse,String originalMojaloopQuotesRequest) throws Exception {
 
-        JsonPath jPathDfspQuotesResponse = JsonPath.from(dfspQuotesResponse);
-        JsonPath jPathOriginalMojaloopQuotesRequest = JsonPath.from(originalMojaloopQuotesRequest);
+        try {
+            com.jayway.jsonpath.DocumentContext ctxDfspQuotesResponse = com.jayway.jsonpath.JsonPath.parse(dfspQuotesResponse);
+            com.jayway.jsonpath.DocumentContext cxtOriginalMojaloopQuotesRequest = com.jayway.jsonpath.JsonPath.parse(originalMojaloopQuotesRequest);
 
-        String fspId = jPathOriginalMojaloopQuotesRequest.getString("payee.partyIdInfo.fspId");
-        String amountStr = jPathOriginalMojaloopQuotesRequest.getString("amount.amount");
-        String ilpAddress = "private.".concat(fspId);
-        long amount = (long)Double.parseDouble(amountStr);
 
-        Transaction transaction = populateTransactionWithQuote(jPathOriginalMojaloopQuotesRequest);
+            log.info("originalMojaloopQuotesRequest: "+originalMojaloopQuotesRequest);
+            //String fspId = jPathOriginalMojaloopQuotesRequest.getString("payee.partyIdInfo.fspId");
+            String amountStr = cxtOriginalMojaloopQuotesRequest.read("amount.amount");
+            //String ilpAddress = "private.".concat(fspId);
+            String ilpAddress = "private.".concat("dfsp2");
+            long amount = (long) Double.parseDouble(amountStr);
 
-        log.info("IlpAddress: " + ilpAddress + " Amount: " + amount + " and Transaction: " + transaction.toString());
+            //Transaction transaction = populateTransactionWithQuote(jPathOriginalMojaloopQuotesRequest);
+            Transaction transaction = new Transaction();
 
-        //Call interop-ilp-conditions jar getIlpPacket()
-        IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
-        String ilpPacket = ilpConditionHandlerImpl.getILPPacket(ilpAddress, amount, transaction);
+            log.info("IlpAddress: " + ilpAddress + " Amount: " + amount + " and Transaction: " + transaction.toString());
 
-        //Call interop-ilp-conditions jar generateCondition()
-        byte[] secret = "secret".getBytes();
-        String ilpCondition = ilpConditionHandlerImpl.generateCondition(ilpPacket, secret);
+            //Call interop-ilp-conditions jar getIlpPacket()
+            IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
+            String ilpPacket = ilpConditionHandlerImpl.getILPPacket(ilpAddress, amount, transaction);
 
-        return Json.createObjectBuilder()
-                .add("transferAmount",Json.createObjectBuilder()
-                                            .add("amount",jPathOriginalMojaloopQuotesRequest.getString("amount.amount"))
-                                            .add("currency",jPathOriginalMojaloopQuotesRequest.getString("amount.currency"))
-                )
-                .add("payeeFspFee",Json.createObjectBuilder()
-                                            .add("amount",jPathDfspQuotesResponse.getString("payeeFee.amount"))
-                                            .add("currency",jPathDfspQuotesResponse.getString("payeeFee.currency"))
-                )
-                .add("payeeFspCommission",Json.createObjectBuilder()
-                                            .add("amount",jPathDfspQuotesResponse.getString("payeeCommission.amount"))
-                                            .add("currency",jPathDfspQuotesResponse.getString("payeeCommission.currency"))
-                )
-                .add("expiration",jPathDfspQuotesResponse.getString("expiresAt"))
-                .add("ilpPacket",ilpPacket)
-                .add("condition",ilpCondition)
-                .build()
-                .toString();
+            //Call interop-ilp-conditions jar generateCondition()
+            byte[] secret = "secret".getBytes();
+            String ilpCondition = ilpConditionHandlerImpl.generateCondition(ilpPacket, secret);
 
+            return Json.createObjectBuilder()
+                    .add("transferAmount", Json.createObjectBuilder()
+                            .add("amount", cxtOriginalMojaloopQuotesRequest.read("amount.amount").toString())
+                            .add("currency", cxtOriginalMojaloopQuotesRequest.read("amount.currency").toString())
+                    )
+                    .add("payeeFspFee", Json.createObjectBuilder()
+                            .add("amount", ctxDfspQuotesResponse.read("payeeFee.amount").toString())
+                            .add("currency", ctxDfspQuotesResponse.read("payeeFee.currency").toString())
+                    )
+                    .add("payeeFspCommission", Json.createObjectBuilder()
+                            .add("amount", ctxDfspQuotesResponse.read("payeeCommission.amount").toString())
+                            .add("currency", ctxDfspQuotesResponse.read("payeeCommission.currency").toString())
+                    )
+                    .add("expiration", ctxDfspQuotesResponse.read("expiresAt").toString())
+                    .add("ilpPacket", ilpPacket)
+                    .add("condition", ilpCondition)
+                    .build()
+                    .toString();
+        }catch (Exception e){
+            log.info("Error in createMojaloopQuotesResponse: "+ org.apache.commons.lang.exception.ExceptionUtils.getFullStackTrace(e));
+            throw e;
+        }
     }
+
+//    public static String createMojaloopQuotesResponse(HashMap dfspQuotesResponseMap,HashMap originalMojaloopQuotesRequestMap) throws Exception {
+//
+//        String fspId = "dfsp2";
+//
+//        HashMap amountMap = (HashMap)originalMojaloopQuotesRequestMap.get("amount");
+//
+//        String amountStr = (String)amountMap.get("amount");
+//        String ilpAddress = "private.".concat(fspId);
+//        long amount = (long)Double.parseDouble(amountStr);
+//
+//        Transaction transaction = populateTransactionWithQuote(jPathOriginalMojaloopQuotesRequest);
+//
+//        log.info("IlpAddress: " + ilpAddress + " Amount: " + amount + " and Transaction: " + transaction.toString());
+//
+//        //Call interop-ilp-conditions jar getIlpPacket()
+//        IlpConditionHandlerImpl ilpConditionHandlerImpl = new IlpConditionHandlerImpl();
+//        String ilpPacket = ilpConditionHandlerImpl.getILPPacket(ilpAddress, amount, transaction);
+//
+//        //Call interop-ilp-conditions jar generateCondition()
+//        byte[] secret = "secret".getBytes();
+//        String ilpCondition = ilpConditionHandlerImpl.generateCondition(ilpPacket, secret);
+//
+//        return Json.createObjectBuilder()
+//                .add("transferAmount",Json.createObjectBuilder()
+//                        .add("amount",jPathOriginalMojaloopQuotesRequest.getString("amount.amount"))
+//                        .add("currency",jPathOriginalMojaloopQuotesRequest.getString("amount.currency"))
+//                )
+//                .add("payeeFspFee",Json.createObjectBuilder()
+//                        .add("amount",jPathDfspQuotesResponse.getString("payeeFee.amount"))
+//                        .add("currency",jPathDfspQuotesResponse.getString("payeeFee.currency"))
+//                )
+//                .add("payeeFspCommission",Json.createObjectBuilder()
+//                        .add("amount",jPathDfspQuotesResponse.getString("payeeCommission.amount"))
+//                        .add("currency",jPathDfspQuotesResponse.getString("payeeCommission.currency"))
+//                )
+//                .add("expiration",jPathDfspQuotesResponse.getString("expiresAt"))
+//                .add("ilpPacket",ilpPacket)
+//                .add("condition",ilpCondition)
+//                .build()
+//                .toString();
+//
+//    }
 
     private static Transaction populateTransactionWithQuote(JsonPath jPathOriginalMojaloopQuotesRequest) {
 

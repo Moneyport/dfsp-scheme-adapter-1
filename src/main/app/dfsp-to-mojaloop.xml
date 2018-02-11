@@ -96,6 +96,38 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
     </flow>
 
+    <flow name="POST:/quotes:central-directory-api-config">
+        <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/v1/quotes" allowedMethods="POST"
+                       doc:name="HTTP"/>
+        <object-to-string-transformer/>
+        <logger level="INFO"
+                message="Received DFSP Quote Request: #[payload]"
+                category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
+        <set-variable variableName="correlationId" value="#[function:uuid] "/>
+        <set-variable variableName="dfsp" value="#['${dfsp-environment}'.substring(0,'${dfsp-environment}'.indexOf('-'))]"/>
+        <expression-component doc:name="Get Quote">
+            <![CDATA[payload = app.registry.utils.createMojaloopQuotesRequest(payload)]]></expression-component>
+        <logger level="INFO"
+                message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/quotes Payload: #[payload] X-Source-Identifier:#[flowVars.dfsp]"
+                category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
+        <http:request config-ref="mojaloop-http-config"
+                      path="/quotes" method="POST" doc:name="Call switch /quotes">
+            <http:request-builder>
+                <http:header headerName="X-Source-Identifier"
+                             value="#[flowVars.dfsp]"/>
+                <http:header headerName="X-Destination-Identifier"
+                             value="dfsp2"/>
+                <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
+            </http:request-builder>
+            <http:success-status-code-validator values="200..599"/>
+        </http:request>
+        <expression-component doc:name="Wait">
+            <![CDATA[Thread.sleep(1000)]]></expression-component>
+        <expression-component doc:name="Get Quote Response">
+            <![CDATA[flowVars.quoteResponse = app.registry.syncAsyncMappingStore.getQuote(flowVars.correlationId.trim())]]></expression-component>
+        <logger level="INFO" message="Quote Response:#[flowVars.quoteResponse]" category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
+    </flow>
+
     <catch-exception-strategy name="interop-catch-exception-strategy">
         <set-property propertyName="Content-Type" value="application/json"
                       doc:name="Property - content-type"/>
