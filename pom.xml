@@ -38,6 +38,11 @@
 			<artifactId>interop-ilp-conditions</artifactId>
 			<version>1.5</version>
 		</dependency>
+		<dependency>
+			<groupId>io.rest-assured</groupId>
+			<artifactId>rest-assured</artifactId>
+			<version>3.0.1</version>
+		</dependency>
     </dependencies>
 
 </project>

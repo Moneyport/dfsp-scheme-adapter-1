@@ -46,4 +46,9 @@ public class TestUtils extends TestCase {
 
         
     }
+
+    public void testcreateDFSPGetResourcesResponse() {
+        String data = "{\"party\":{\"partyIdInfo\":{\"partyIdType\":\"MSISDN\",\"partyIdentifier\":\"27213971461\"},\"name\":\"alice cooper\",\"personalInfo\":{\"complexName\":{\"firstName\":\"alice\",\"lastName\":\"cooper\"},\"dateOfBirth\":\"1989-03-22\"}}}";
+        Utils.createDFSPGetResourcesResponse(data,"dfsp1","localhost","8014");
+    }
 }

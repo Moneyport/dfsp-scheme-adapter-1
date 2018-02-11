@@ -66,8 +66,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/resources" allowedMethods="GET"
                        doc:name="HTTP"/>
         <object-to-string-transformer/>
-        <set-variable variableName="authorization"
-                      value="#[message.inboundProperties.authorization]" doc:name="Save authorization"/>
+        <expression-component doc:name="Get Participant">
+            <![CDATA[flowVars.dfspName = app.registry.utils.getDFSPName(message.inboundProperties.authorization)]]></expression-component>
         <set-variable variableName="partyId"
                       value="#[message.inboundProperties.'http.query.params'.identifier.substring(4)]"
                       doc:name="Save identifier"/>
@@ -76,10 +76,10 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                 message="Sending request to GET http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/parties/MSISDN/#[flowVars.partyId]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
-                      path="/parties/#[flowVars.partyId]" method="GET" doc:name="Call switch /parties">
+                      path="/parties/MSISDN/#[flowVars.partyId]" method="GET" doc:name="Call switch /parties">
             <http:request-builder>
                 <http:header headerName="X-Source-Identifier"
-                             value="#[message.inboundProperties.'X-Source-Identifier']"/>
+                             value="#[flowVars.dfspName]"/>
                 <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
             </http:request-builder>
             <http:success-status-code-validator values="200..599"/>
@@ -90,8 +90,10 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <expression-component doc:name="Get Participant">
             <![CDATA[flowVars.payeeDetails = app.registry.syncAsyncMappingStore.getParticipant(flowVars.correlationId.trim())]]></expression-component>
         <expression-component doc:name="Generate response">
-            <![CDATA[flowVars.retMap = app.registry.utils.createAddParticipantRequest(payload,message.inboundProperties.authorization)]]></expression-component>
-
+            <![CDATA[payload = app.registry.utils.createDFSPGetResourcesResponse(flowVars.payeeDetails,flowVars.dfspName,'${dfsp-host}','8014')]]></expression-component>
+        <logger level="INFO"
+                message="Sending response to dfsp GET /resources: #[payload]"
+                category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
     </flow>
 
     <catch-exception-strategy name="interop-catch-exception-strategy">

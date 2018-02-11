@@ -81,45 +81,51 @@ public class Utils {
 
     }
 
-    public static String createDFSPGetResourcesResponse(String mlPartiesResponse, String authorization,String dfspHost,String dfspPort){
-        JsonObject objMLPartiesResponse = Json.createReader(new StringReader(mlPartiesResponse)).readObject();
-        String fullName = objMLPartiesResponse.getString("party.personalInfo.complexName.firstName")+" "+ objMLPartiesResponse.getString("party.personalInfo.complexName.lastName");
-        String account = "http://"+dfspHost+":"+dfspPort+"/accounts/"+objMLPartiesResponse.getString("party.personalInfo.complexName.lastName");
+    public static String createDFSPGetResourcesResponse(String mlPartiesResponse, String dfspName, String dfspHost,String dfspPort){
+        try {
+            log.info("In createDFSPGetResourcesResponse. mlPartiesResponse: "+mlPartiesResponse+" dfspHost: "+dfspHost+" dfspPort: "+dfspPort);
+            JsonPath jPath = JsonPath.from(mlPartiesResponse);
+            String fullName = jPath.getString("party.personalInfo.complexName.firstName") + " " + jPath.getString("party.personalInfo.complexName.lastName");
+            String account = "http://" + dfspHost + ":" + dfspPort + "/accounts/" + jPath.getString("party.personalInfo.complexName.lastName");
+            JsonObject dfspDetails = Json.createObjectBuilder()
+                    .add("type", "payee")
+                    .add("name", fullName)
+                    .add("firstName", jPath.getString("party.personalInfo.complexName.firstName"))
+                    .add("lastName", jPath.getString("party.personalInfo.complexName.lastName"))
+                    .add("nationalId", "")
+                    .add("dob", jPath.getString("party.personalInfo.dateOfBirth"))
+                    .add("account", account)
+                    .add("currencyCode", "TZS")
+                    .add("currencySymbol", "TSh")
+                    .add("imageUrl", "https://red.ilpdemo.org/api/receivers/alice_cooper/profile_pic.jpg")
+                    .build();
 
-        JsonObject dfspDetails = Json.createObjectBuilder()
-                                                    .add("type","payee")
-                                                    .add("name",fullName)
-                                                    .add("firstName",objMLPartiesResponse.getString("party.personalInfo.complexName.firstName"))
-                                                    .add("lastName",objMLPartiesResponse.getString("party.personalInfo.complexName.lastName"))
-                                                    .add("nationalId","")
-                                                    .add("dob",objMLPartiesResponse.getString("party.personalInfo.dateOfBirth"))
-                                                    .add("account",account)
-                                                    .add("currencyCode","TZS")
-                                                    .add("currencySymbol","TSh")
-                                                    .add("imageUrl","https://red.ilpdemo.org/api/receivers/alice_cooper/profile_pic.jpg")
-                                                    .build();
+            JsonObject fraudDetails = Json.createObjectBuilder()
+                    .add("id", UUID.getUUID())
+                    .add("score", 0)
+                    .add("createdDate", DateUtils.formatDate(Calendar.getInstance().getTime(), "YYYY-MM-DD HH:mm:ss.SSSZ"))
+                    .build();
 
-        JsonObject fraudDetails = Json.createObjectBuilder()
-                                                    .add("id", UUID.getUUID())
-                                                    .add("score",0)
-                                                    .add("createdDate",DateUtils.formatDate(Calendar.getInstance().getTime(),"YYYY-MM-DDTHH:mm:ss.SSSZ"))
-                                                    .build();
+            JsonArray directoryDetails = Json.createArrayBuilder()
+                    .add(Json.createObjectBuilder()
+                            .add("name", dfspName)
+                            .add("shortName", dfspName)
+                            .add("providerUrl", "http://" + dfspHost + ":8088/scheme/adapter/v1")
+                            .add("primary", true)
+                            .add("registered", true)
+                    )
+                    .build();
+            return Json.createObjectBuilder()
+                    .add("dfsp_details", dfspDetails)
+                    .add("fraud_details", fraudDetails)
+                    .add("directory_details", directoryDetails)
+                    .build()
+                    .toString();
 
-        JsonArray directoryDetails = Json.createArrayBuilder()
-                                                    .add(Json.createObjectBuilder()
-                                                                            .add("name",objMLPartiesResponse.getString("party.partyIdInfo.fspId"))
-                                                                            .add("shortName",objMLPartiesResponse.getString("party.partyIdInfo.fspId"))
-                                                                            .add("providerUrl","http://"+dfspHost+":8088/scheme/adapter/v1")
-                                                                            .add("primary",true)
-                                                                            .add("registered",true)
-                                                    )
-                                                    .build();
-        return Json.createObjectBuilder()
-                            .add("dfsp_details",dfspDetails)
-                            .add("fraud_details",fraudDetails)
-                            .add("directory_details",directoryDetails)
-                            .build()
-                            .toString();
+        }catch(Exception e){
+            log.info("Exception in createDFSPGetResourcesResponse: "+ExceptionUtils.getStackTrace(e));
+            throw e;
+        }
     }
 
 
@@ -355,5 +361,15 @@ public class Utils {
                         .add("transferState","COMMITTED")
                         .build()
                         .toString();
+    }
+
+    public static String getDFSPName(String authorization){
+        String base64Credentials = authorization.substring("Basic".length()).trim();
+        String credentials = new String(Base64.decode(base64Credentials), Charset.forName(Base64.PREFERRED_ENCODING));
+        log.info("Credentials: "+credentials);
+        String dfspName = credentials.split(":")[0];
+        log.info("dfspName: "+dfspName);
+
+        return dfspName;
     }
 }
