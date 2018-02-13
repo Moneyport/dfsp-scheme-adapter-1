@@ -6,7 +6,9 @@ import junit.framework.TestCase;
 import org.junit.Test;
 import org.junit.runners.model.TestClass;
 
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Date;
 import java.util.logging.Logger;
 
 
@@ -56,5 +58,11 @@ public class TestUtils extends TestCase {
     public void testDFSPGetQuotesRequest(){
         String data = "{\"quoteId\":\"c61cf17c-0c60-4147-8124-8ebe4729ade5\",\"transactionId\":\"c61cf17c-0c60-4147-8124-8ebe4729ade5\",\"payer\":{\"partyIdInfo\":{\"partyIdentifier\":\"14614767\",\"partyIdType\":\"MSISDN\"}},\"payee\":{\"partyIdInfo\":{\"partyIdentifier\":\"27213971461\",\"partyIdType\":\"MSISDN\"}},\"amount\":{\"amount\":\"1200\",\"currency\":\"USD\"},\"amountType\":\"SEND\",\"transactionType\":{\"scenario\":\"DEPOSIT\",\"initiator\":\"PAYER\",\"initiatorType\":\"CONSUMER\"}}";
         Utils.createDFSPQuotesRequest(data);
+    }
+
+    public void testDate(){
+        Date expiryDt = org.apache.commons.lang3.time.DateUtils.addHours(new Date(),10);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        log.info(sdf.format(expiryDt));
     }
 }

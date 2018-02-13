@@ -40,4 +40,14 @@ public class SyncAsyncMappingStore {
         return map.get(correlationId);
     }
 
+    public void addPaymentFulfillResponse(String correlationId,String fulfillResponse){
+        log.info("In addPaymentFulfillResponse: "+correlationId+";"+fulfillResponse);
+        map.put(correlationId,fulfillResponse);
+    }
+
+    public String getPaymentFulfillResponse(String correlationId) {
+        log.info("In getPaymentFulfillResponse: "+correlationId+";"+ map.get(correlationId));
+        return map.get(correlationId);
+    }
+
 }

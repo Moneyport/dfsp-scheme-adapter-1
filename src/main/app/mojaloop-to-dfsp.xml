@@ -75,10 +75,16 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
     <flow name="put:/transfers/{ID}:application/json:mojaloop-config">
-        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        <set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Forwarded-For']"/>
+        <object-to-string-transformer/>
+        <expression-component doc:name="PUT  Quote">
+            <![CDATA[app.registry.syncAsyncMappingStore.addPaymentFulfillResponse(flowVars.correlationId.trim(),payload)]]></expression-component>
     </flow>
     <flow name="put:/quotes/{ID}:application/json:mojaloop-config">
-        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        <set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Forwarded-For']"/>
+        <object-to-string-transformer/>
+        <expression-component doc:name="PUT  Quote">
+            <![CDATA[app.registry.syncAsyncMappingStore.addQuote(flowVars.correlationId.trim(),payload)]]></expression-component>
     </flow>
     <flow name="put:/bulkTransfers/{ID}:application/json:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
@@ -232,10 +238,11 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                 doc:name="Logger"/>
         <!-- Making call to DFSP for Quotes-->
         <!--<expression-component doc:name="Generate DFSP Quotes Request">-->
-            <!--<![CDATA[import io.restassured.path.json.JsonPath;-->
-                <!--flowVars.quoteId = JsonPath.from(payload.trim()).getString('quoteId');]]></expression-component>-->
-        <json:json-to-object-transformer returnClass="java.util.HashMap"/>
-        <set-variable variableName="originalMojaloopQuotesRequestMap" value="#[payload]"/>
+            <!--<![CDATA[import com.jayway.jsonpath.JsonPath;-->
+                <!--flowVars.quoteId = JsonPath.parse(payload).read('quoteId').toString();]]></expression-component>-->
+        <expression-component doc:name="Generate DFSP Quotes Request">
+            <![CDATA[import io.restassured.path.json.JsonPath;
+                flowVars.quoteId = JsonPath.from(payload).getString('quoteId');]]></expression-component>
         <expression-component doc:name="Generate DFSP Quotes Request">
             <![CDATA[payload = app.registry.utils.createDFSPQuotesRequest(payload)]]></expression-component>
         <logger level="INFO"
