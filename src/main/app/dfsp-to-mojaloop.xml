@@ -103,17 +103,21 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <logger level="INFO"
                 message="Received DFSP Quote Request: #[payload]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
+        <set-variable variableName="dfspQuoteRequest" value="#[payload]"/>
         <set-variable variableName="correlationId" value="#[function:uuid] "/>
         <expression-component doc:name="Generate DFSP Quotes Request">
             <![CDATA[import io.restassured.path.json.JsonPath;
-                flowVars.paymentId = JsonPath.from(payload).getString("paymentId");]]></expression-component>
+                flowVars.paymentId = JsonPath.from(payload).getString("paymentId");
+                flowVars.payeeId = JsonPath.from(payload).getString("payee.identifier");
+                ]]></expression-component>
         <set-variable variableName="payerFspId"
                       value="#['${dfsp-environment}'.substring(0,'${dfsp-environment}'.indexOf('-'))]"/>
         <!-- TODO Replace the below logic with call to account lookup-->
-        <set-variable variableName="payeeFspId"
-                      value="dfsp2"/>
+        <!--<set-variable variableName="payeeFspId"-->
+                      <!--value="dfsp2"/>-->
+        <flow-ref name="getPayeeFspId"/>
         <expression-component doc:name="Get Quote">
-            <![CDATA[payload = app.registry.utils.createMojaloopQuotesRequest(payload,flowVars.payerFspId,flowVars.payeeFspId)]]></expression-component>
+            <![CDATA[payload = app.registry.utils.createMojaloopQuotesRequest(flowVars.dfspQuoteRequest,flowVars.payerFspId,flowVars.payeeFspId)]]></expression-component>
         <logger level="INFO"
                 message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/quotes Payload: #[payload] X-Source-Identifier:#[flowVars.dfsp]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
@@ -139,6 +143,30 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <logger level="INFO" message="Sending DFSP Quote Response:#[payload]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
     </flow>
+
+    <sub-flow name="getPayeeFspId">
+        <set-variable variableName="payeeFspIdCorrelationId" value="#[function:uuid] "/>
+        <logger level="INFO"
+                message="Sending request to GET http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/participants/MSISDN/#[flowVars.payeeId]"
+                category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
+        <http:request config-ref="mojaloop-http-config"
+                      path="/participants/MSISDN/#[flowVars.payeeId]" method="GET" doc:name="Call switch /participants">
+            <http:request-builder>
+                <http:header headerName="X-Source-Identifier"
+                             value="#[flowVars.payerFspId]"/>
+                <http:header headerName="X-Forwarded-For" value="#[flowVars.payeeFspIdCorrelationId]"/>
+            </http:request-builder>
+            <http:success-status-code-validator values="200..599"/>
+        </http:request>
+
+        <expression-component doc:name="Wait">
+            <![CDATA[Thread.sleep(1000)]]></expression-component>
+        <expression-component doc:name="Get Participant">
+            <![CDATA[flowVars.payeeFspDetails = app.registry.syncAsyncMappingStore.getParticipant(flowVars.payeeFspIdCorrelationId.trim())]]></expression-component>
+        <expression-component doc:name="Generate DFSP Quotes Request">
+            <![CDATA[import io.restassured.path.json.JsonPath;
+                flowVars.payeeFspId = JsonPath.from(flowVars.payeeFspDetails).getString("fspId");]]></expression-component>
+    </sub-flow>
 
     <flow name="PUT:/payments:central-directory-api-config">
         <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/v1/payments" allowedMethods="PUT"

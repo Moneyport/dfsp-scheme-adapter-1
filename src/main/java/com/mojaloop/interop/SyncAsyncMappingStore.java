@@ -16,7 +16,6 @@ public class SyncAsyncMappingStore {
     }
 
     public String getParticipant(String correlationId) {
-        log.info("In getParticipant: "+correlationId+";"+ map.get(correlationId));
         return map.get(correlationId);
     }
 
@@ -25,28 +24,23 @@ public class SyncAsyncMappingStore {
     }
 
     public void addParticipant(String correlationId,String participantJson){
-        log.info("In add participant: "+correlationId+";"+participantJson);
         map.put(correlationId,participantJson);
 
     }
 
     public void addQuote(String correlationId,String quoteJson){
-        log.info("In add quote: "+correlationId+";"+quoteJson);
         map.put(correlationId,quoteJson);
     }
 
     public String getQuote(String correlationId) {
-        log.info("In getQuote: "+correlationId+";"+ map.get(correlationId));
         return map.get(correlationId);
     }
 
     public void addPaymentFulfillResponse(String correlationId,String fulfillResponse){
-        log.info("In addPaymentFulfillResponse: "+correlationId+";"+fulfillResponse);
         map.put(correlationId,fulfillResponse);
     }
 
     public String getPaymentFulfillResponse(String correlationId) {
-        log.info("In getPaymentFulfillResponse: "+correlationId+";"+ map.get(correlationId));
         return map.get(correlationId);
     }
 
