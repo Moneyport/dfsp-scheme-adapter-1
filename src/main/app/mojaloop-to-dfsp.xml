@@ -16,7 +16,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     <flow name="mojaloop-main">
         <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/ml-dfsp/v1/*" doc:name="HTTP"/>
         <logger level="INFO"
-                message="Received request at method=#[message.inboundProperties.'http.method'], url=http://#[message.inboundProperties.'host'+message.inboundProperties.'http.request.path'], Payload=#[message.payloadAs(java.lang.String)]; Headers :: X-Source-Identifier: #[message.inboundProperties.'X-Source-Identifier'], X-Destination-Identifier: #[message.inboundProperties.'X-Destination-Identifier'], Accept: #[message.inboundProperties.'Accept'], Date: #[message.inboundProperties.'Date'], Content-Type: #[message.inboundProperties.'Content-Type']"
+                message="Received request at method=#[message.inboundProperties.'http.method'], url=http://#[message.inboundProperties.'host'+message.inboundProperties.'http.request.path'], Payload=#[message.payloadAs(java.lang.String)]; Headers :: FSPIOP-Source: #[message.inboundProperties.'FSPIOP-Source'], FSPIOP-Destination: #[message.inboundProperties.'FSPIOP-Destination'], Accept: #[message.inboundProperties.'Accept'], Date: #[message.inboundProperties.'Date'], Content-Type: #[message.inboundProperties.'Content-Type']"
                 category="com.l1p.interop.routing" doc:name="logger"/>
         <component class="com.mojaloop.interop.OverideInboundProperties" doc:name="OverideInboundProperties"/>
         <apikit:router config-ref="mojaloop-config" doc:name="APIkit Router"/>
@@ -118,7 +118,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
     <flow name="get:/parties/{Type}/{ID}:mojaloop-config">
         <logger level="INFO"
-                message="X-Source-Id: #[message.inboundProperties.'X-Source-Identifier'] X-Dest-Id: #[message.inboundProperties.'X-Destination-Identifier']"
+                message="X-Source-Id: #[message.inboundProperties.'FSPIOP-Source'] X-Dest-Id: #[message.inboundProperties.'FSPIOP-Destination']"
                 category="com.pdp.interop.mockfsp" doc:name="logger"/>
         <set-property propertyName="Type" value="#[message.inboundProperties.'http.uri.params'.Type]"/>
         <set-property propertyName="ID" value="#[message.inboundProperties.'http.uri.params'.ID]"/>
@@ -137,8 +137,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                       doc:name="Variable"/>
 
         <!-- Storing headers as flow variables as the call to dfsp overides required headers-->
-        <set-variable variableName="X-Source-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"/>
-        <set-variable variableName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"/>
+        <set-variable variableName="FSPIOP-Source" value="#[message.inboundProperties.'FSPIOP-Source']"/>
+        <set-variable variableName="FSPIOP-Destination" value="#[message.inboundProperties.'FSPIOP-Destination']"/>
         <set-variable variableName="X-Forwarded-For" value="#[message.inboundProperties.'X-Forwarded-For']"/>
 
         <!-- Making call to DFSP to get the party/receiver information-->
@@ -160,8 +160,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <!-- Making Callback to Mojaloop-->
         <expression-component doc:name="Get Participant">
             <![CDATA[payload = app.registry.utils.createMojaloopPartiesResponse(payload,flowVars.receiverId)]]></expression-component>
-        <set-property propertyName="X-Source-Identifier" value="#[flowVars.'X-Destination-Identifier']"/>
-        <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']"/>
+        <set-property propertyName="FSPIOP-Source" value="#[flowVars.'FSPIOP-Destination']"/>
+        <set-property propertyName="FSPIOP-Destination" value="#[flowVars.'FSPIOP-Source']"/>
         <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']"/>
 
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
@@ -229,8 +229,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <flow-ref name="populate-outbound-properties"/>
 
         <!-- Storing headers as flow variables as the call to dfsp overides required headers-->
-        <set-variable variableName="X-Source-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"/>
-        <set-variable variableName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"/>
+        <set-variable variableName="FSPIOP-Source" value="#[message.inboundProperties.'FSPIOP-Source']"/>
+        <set-variable variableName="FSPIOP-Destination" value="#[message.inboundProperties.'FSPIOP-Destination']"/>
         <set-variable variableName="X-Forwarded-For" value="#[message.inboundProperties.'X-Forwarded-For']"/>
 
         <set-variable variableName="originalMojaloopQuotesRequest" value="#[payload]"/>
@@ -264,8 +264,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <!-- Making PUT callback to Mojaloop -->
         <expression-component doc:name="Create Mojaloop Response">
             <![CDATA[payload = app.registry.utils.createMojaloopQuotesResponse(payload,flowVars.originalMojaloopQuotesRequest)]]></expression-component>
-        <set-property propertyName="X-Source-Identifier" value="#[flowVars.'X-Destination-Identifier']"/>
-        <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']"/>
+        <set-property propertyName="FSPIOP-Source" value="#[flowVars.'FSPIOP-Destination']"/>
+        <set-property propertyName="FSPIOP-Destination" value="#[flowVars.'FSPIOP-Source']"/>
         <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']"/>
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
@@ -291,8 +291,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <!--<flow-ref name="populate-outbound-properties"/>-->
         <object-to-string-transformer/>
         <!-- Storing headers as flow variables as the call to dfsp overides required headers-->
-        <set-variable variableName="X-Source-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"/>
-        <set-variable variableName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"/>
+        <set-variable variableName="FSPIOP-Source" value="#[message.inboundProperties.'FSPIOP-Source']"/>
+        <set-variable variableName="FSPIOP-Destination" value="#[message.inboundProperties.'FSPIOP-Destination']"/>
         <set-variable variableName="X-Forwarded-For" value="#[message.inboundProperties.'X-Forwarded-For']"/>
 
         <set-variable variableName="originalMojaloopTransferRequest" value="#[payload]"/>
@@ -352,8 +352,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <!-- Call Mojaloop Callback PUT for Fulfill Transfer-->
         <expression-component doc:name="Get Data from Transfer Request">
             <![CDATA[payload = app.registry.utils.createMojaloopFulfillTransferResponse(flowVars.originalMojaloopTransferRequest)]]></expression-component>
-        <set-property propertyName="X-Source-Identifier" value="#[flowVars.'X-Destination-Identifier']"/>
-        <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']"/>
+        <set-property propertyName="FSPIOP-Source" value="#[flowVars.'FSPIOP-Destination']"/>
+        <set-property propertyName="FSPIOP-Destination" value="#[flowVars.'FSPIOP-Source']"/>
         <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']"/>
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
@@ -374,31 +374,30 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
     <sub-flow name="populate-outbound-properties">
         <!-- Populate out-bound properties based on in-bound headers -->
-        <expression-component doc:name="Set-Accept"><![CDATA[if( message.inboundProperties.Accept != null )
-	message.outboundProperties['Accept'] = message.inboundProperties.Accept;]]></expression-component>
+        <!-- <expression-component doc:name="Set-Accept"><![CDATA[if( message.inboundProperties.Accept != null )
+	message.outboundProperties['Accept'] = message.inboundProperties.Accept;]]></expression-component> -->
         <expression-component doc:name="Set-Date"><![CDATA[if( message.inboundProperties.Date != null )
 	message.outboundProperties['Date'] = message.inboundProperties.Date;]]></expression-component>
-        <!--<expression-component doc:name="Set-Content-Length"><![CDATA[if( message.inboundProperties.'Content-Length' != null )-->
-        <!--message.outboundProperties['Content-Length'] = message.inboundProperties.'Content-Length';]]></expression-component>-->
+        <!-- <expression-component doc:name="Set-Content-Length"><![CDATA[if( message.inboundProperties.'Content-Length' != null )
+	message.outboundProperties['Content-Length'] = message.inboundProperties.'Content-Length';]]></expression-component> -->
         <expression-component doc:name="Set-Content-Type"><![CDATA[if( message.inboundProperties.'Content-Type' != null )
-	message.outboundProperties['Content-Type'] = message.inboundProperties.'Content-Type';]]></expression-component>
-        <expression-component doc:name="Set-X-Source-Identifier"><![CDATA[if( message.inboundProperties.'X-Source-Identifier' != null )
-	message.outboundProperties['X-Source-Identifier'] = message.inboundProperties.'X-Source-Identifier';]]></expression-component>
-        <expression-component doc:name="Set-X-Destination-Identifier"><![CDATA[if( message.inboundProperties.'X-Destination-Identifier' != null )
-	message.outboundProperties['X-Destination-Identifier'] = message.inboundProperties.'X-Destination-Identifier';]]></expression-component>
+	message.outboundProperties['Content-Type'] = "application/json";]]></expression-component>
+        <expression-component doc:name="Set-FSPIOP-Source"><![CDATA[if( message.inboundProperties.'FSPIOP-Source' != null )
+	message.outboundProperties['FSPIOP-Source'] = message.inboundProperties.'FSPIOP-Source';]]></expression-component>
+        <expression-component doc:name="Set-FSPIOP-Destination"><![CDATA[if( message.inboundProperties.'FSPIOP-Destination' != null )
+	message.outboundProperties['FSPIOP-Destination'] = message.inboundProperties.'FSPIOP-Destination';]]></expression-component>
         <expression-component doc:name="Set-X-Forwarded-For"><![CDATA[if( message.inboundProperties.'X-Forwarded-For' != null )
 	message.outboundProperties['X-Forwarded-For'] = message.inboundProperties.'X-Forwarded-For';]]></expression-component>
-        <expression-component doc:name="Set-X-API-Encryption"><![CDATA[if( message.inboundProperties.'X-API-Encryption' != null )
-	message.outboundProperties['X-API-Encryption'] = message.inboundProperties.'X-API-Encryption';]]></expression-component>
-        <expression-component doc:name="Set-X-API-Signature"><![CDATA[if( message.inboundProperties.'X-API-Signature' != null )
-	message.outboundProperties['X-API-Signature'] = message.inboundProperties.'X-API-Signature';]]></expression-component>
-        <expression-component doc:name="Set-X-API-URI"><![CDATA[if( message.inboundProperties.'X-API-URI' != null )
-	message.outboundProperties['X-API-URI'] = message.inboundProperties.'X-API-URI';]]></expression-component>
-        <expression-component doc:name="Set-X-HTTP-Method"><![CDATA[if( message.inboundProperties.'X-HTTP-Method' != null )
-	message.outboundProperties['X-HTTP-Method'] = message.inboundProperties.'X-HTTP-Method';]]></expression-component>
-        <logger level="INFO"
-                message="In populate outbound properties subflow. Outbound properties at this stage: #[message.outboundProperties]"
-                category="com.l1p.interop.routing.populate-outbound-properties" doc:name="logger"/>
+        <expression-component doc:name="Set-FSPIOP-Encryption"><![CDATA[if( message.inboundProperties.'FSPIOP-Encryption' != null )
+	message.outboundProperties['FSPIOP-Encryption'] = message.inboundProperties.'FSPIOP-Encryption';]]></expression-component>
+        <expression-component doc:name="Set-FSPIOP-Signature"><![CDATA[if( message.inboundProperties.'FSPIOP-Signature' != null )
+	message.outboundProperties['FSPIOP-Signature'] = message.inboundProperties.'FSPIOP-Signature';]]></expression-component>
+        <expression-component doc:name="Set-FSPIOP-URI"><![CDATA[if( message.inboundProperties.'FSPIOP-URI' != null )
+	message.outboundProperties['FSPIOP-URI'] = message.inboundProperties.'FSPIOP-URI';]]></expression-component>
+        <expression-component doc:name="Set-FSPIOP-HTTP-Method"><![CDATA[if( message.inboundProperties.'FSPIOP-HTTP-Method' != null )
+	message.outboundProperties['FSPIOP-HTTP-Method'] = message.inboundProperties.'FSPIOP-HTTP-Method';]]></expression-component>
+        <logger message="In populate outbound properties subflow. Outbound properties at this stage: #[message.outboundProperties]"
+                level="INFO" category="com.l1p.interop.routing.populate-outbound-properties" doc:name="logger"/>
     </sub-flow>
 
     <apikit:mapping-exception-strategy name="apiKitGlobalExceptionMapping">

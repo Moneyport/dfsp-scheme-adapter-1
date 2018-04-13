@@ -52,7 +52,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                       path="/participants/#[flowVars.retMap.identifierType]/#[flowVars.retMap.identifier]" method="POST"
                       doc:name="Call account-lookup /participants">
             <http:request-builder>
-                <http:header headerName="X-Source-Identifier" value="#[flowVars.retMap.dfspName]"/>
+                <http:header headerName="FSPIOP-Source" value="#[flowVars.retMap.dfspName]"/>
                 <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
             </http:request-builder>
             <http:success-status-code-validator values="200..599"/>
@@ -78,7 +78,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <http:request config-ref="mojaloop-http-config"
                       path="/parties/MSISDN/#[flowVars.partyId]" method="GET" doc:name="Call switch /parties">
             <http:request-builder>
-                <http:header headerName="X-Source-Identifier"
+                <http:header headerName="FSPIOP-Source"
                              value="#[flowVars.dfspName]"/>
                 <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
             </http:request-builder>
@@ -119,14 +119,14 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <expression-component doc:name="Get Quote">
             <![CDATA[payload = app.registry.utils.createMojaloopQuotesRequest(flowVars.dfspQuoteRequest,flowVars.payerFspId,flowVars.payeeFspId)]]></expression-component>
         <logger level="INFO"
-                message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/quotes Payload: #[payload] X-Source-Identifier:#[flowVars.dfsp]"
+                message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/quotes Payload: #[payload] FSPIOP-Source:#[flowVars.dfsp]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/quotes" method="POST" doc:name="Call switch /quotes">
             <http:request-builder>
-                <http:header headerName="X-Source-Identifier"
+                <http:header headerName="FSPIOP-Source"
                              value="#[flowVars.payerFspId]"/>
-                <http:header headerName="X-Destination-Identifier"
+                <http:header headerName="FSPIOP-Destination"
                              value="#[flowVars.payeeFspId]"/>
                 <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
             </http:request-builder>
@@ -152,7 +152,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <http:request config-ref="mojaloop-http-config"
                       path="/participants/MSISDN/#[flowVars.payeeId]" method="GET" doc:name="Call switch /participants">
             <http:request-builder>
-                <http:header headerName="X-Source-Identifier"
+                <http:header headerName="FSPIOP-Source"
                              value="#[flowVars.payerFspId]"/>
                 <http:header headerName="X-Forwarded-For" value="#[flowVars.payeeFspIdCorrelationId]"/>
             </http:request-builder>
@@ -194,14 +194,14 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <![CDATA[flowVars.retMap = app.registry.utils.createMojaloopPrepareTransferRequest(flowVars.dfspRequest)]]></expression-component>
         <set-payload value="#[flowVars.retMap.mlPrepareRequest]"/>
         <logger level="INFO"
-                message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/transfers Payload: #[payload] X-Source-Identifier:#[flowVars.retMap.payerFspId] X-Destination-Identifier:#[flowVars.retMap.payeeFspId]"
+                message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/transfers Payload: #[payload] FSPIOP-Source:#[flowVars.retMap.payerFspId] FSPIOP-Destination:#[flowVars.retMap.payeeFspId]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/transfers" method="POST" doc:name="Call switch /quotes">
             <http:request-builder>
-                <http:header headerName="X-Source-Identifier"
+                <http:header headerName="FSPIOP-Source"
                              value="#[flowVars.retMap.payerFspId]"/>
-                <http:header headerName="X-Destination-Identifier"
+                <http:header headerName="FSPIOP-Destination"
                              value="#[flowVars.retMap.payeeFspId]"/>
                 <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
             </http:request-builder>

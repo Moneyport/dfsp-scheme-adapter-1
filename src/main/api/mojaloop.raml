@@ -653,14 +653,14 @@ traits:
         required: false
         description: "The X-Forwarded-For header field is an unofficially accepted standard used for informational purposes of the originating client IP address, as a request might pass multiple proxies, firewalls, and so on. Multiple X-Forwarded-For values as in the example shown here should be expected and supported by implementers of the API.
           Note - An alternative to X-Forwarded-For is defined in RFC 7239. However, to this point RFC 7239 is less-used and supported than X-Forwarded-For."
-      X-Source-Identifier:
+      FSPIOP-Source:
         type: string
         required: true
-        description: "The X-Source-Identifier header field is a non-HTTP standard field used by the API for identifying the source FSP (sender of the HTTP request). The field should be populated by the source FSP. Required for signature verification, see header field X-API-Signature."
-      X-Destination-Identifier:
+        description: "The FSPIOP-Source header field is a non-HTTP standard field used by the API for identifying the source FSP (sender of the HTTP request). The field should be populated by the source FSP. Required for signature verification, see header field X-API-Signature."
+      FSPIOP-Destination:
         type: string
         required: false
-        description: "The X-Destination-Identifier header field is a non-HTTP standard field used by the API for HTTP header based routing of requests and responses. This field should be populated by the destination FSP identifier (if known), so that any entities between the client and the server do not need to parse the payload for routing purposes."
+        description: "The FSPIOP-Destination header field is a non-HTTP standard field used by the API for HTTP header based routing of requests and responses. This field should be populated by the destination FSP identifier (if known), so that any entities between the client and the server do not need to parse the payload for routing purposes."
       X-API-Encryption:
         type: string
         required: false
@@ -698,14 +698,14 @@ traits:
         required: false
         description: "The X-Forwarded-For header field is an unofficially accepted standard used for informational purposes of the originating client IP address, as a request might pass multiple proxies, firewalls, and so on. Multiple X-Forwarded-For values as in the example shown here should be expected and supported by implementers of the API.
           Note - An alternative to X-Forwarded-For is defined in RFC 7239. However, to this point RFC 7239 is less-used and supported than X-Forwarded-For."
-      X-Source-Identifier:
+      FSPIOP-Source:
         type: string
         required: true
-        description: "The X-Source-Identifier header field is a non-HTTP standard field used by the API for identifying the source FSP (sender of the HTTP request). The field should be populated by the source FSP. Required for signature verification, see header field X-API-Signature."
-      X-Destination-Identifier:
+        description: "The FSPIOP-Source header field is a non-HTTP standard field used by the API for identifying the source FSP (sender of the HTTP request). The field should be populated by the source FSP. Required for signature verification, see header field X-API-Signature."
+      FSPIOP-Destination:
         type: string
         required: false
-        description: "The X-Destination-Identifier header field is a non-HTTP standard field used by the API for HTTP header based routing of requests and responses. This field should be populated by the destination FSP identifier (if known), so that any entities between the client and the server do not need to parse the payload for routing purposes."
+        description: "The FSPIOP-Destination header field is a non-HTTP standard field used by the API for HTTP header based routing of requests and responses. This field should be populated by the destination FSP identifier (if known), so that any entities between the client and the server do not need to parse the payload for routing purposes."
       X-API-Encryption:
         type: string
         required: false
@@ -747,14 +747,14 @@ traits:
         required: false
         description: "The X-Forwarded-For header field is an unofficially accepted standard used for informational purposes of the originating client IP address, as a request might pass multiple proxies, firewalls, and so on. Multiple X-Forwarded-For values as in the example shown here should be expected and supported by implementers of the API.
           Note - An alternative to X-Forwarded-For is defined in RFC 7239. However, to this point RFC 7239 is less-used and supported than X-Forwarded-For."
-      X-Source-Identifier:
+      FSPIOP-Source:
         type: string
         required: true
-        description: "The X-Source-Identifier header field is a non-HTTP standard field used by the API for identifying the source FSP (sender of the HTTP request). The field should be populated by the source FSP. Required for signature verification, see header field X-API-Signature."
-      X-Destination-Identifier:
+        description: "The FSPIOP-Source header field is a non-HTTP standard field used by the API for identifying the source FSP (sender of the HTTP request). The field should be populated by the source FSP. Required for signature verification, see header field X-API-Signature."
+      FSPIOP-Destination:
         type: string
         required: false
-        description: "The X-Destination-Identifier header field is a non-HTTP standard field used by the API for HTTP header based routing of requests and responses. This field should be populated by the destination FSP identifier (if known), so that any entities between the client and the server do not need to parse the payload for routing purposes."
+        description: "The FSPIOP-Destination header field is a non-HTTP standard field used by the API for HTTP header based routing of requests and responses. This field should be populated by the destination FSP identifier (if known), so that any entities between the client and the server do not need to parse the payload for routing purposes."
       X-API-Encryption:
         type: string
         required: false
