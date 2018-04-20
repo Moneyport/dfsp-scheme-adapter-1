@@ -292,7 +292,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <object-to-string-transformer/>
         <!-- Storing headers as flow variables as the call to dfsp overides required headers-->
         <set-variable variableName="FSPIOP-Source" value="#[message.inboundProperties.'FSPIOP-Source']"/>
+        <set-variable variableName="X-Source-Identifier" value="#[message.inboundProperties.'X-Source-Identifier']"/>
         <set-variable variableName="FSPIOP-Destination" value="#[message.inboundProperties.'FSPIOP-Destination']"/>
+        <set-variable variableName="X-Destination-Identifier" value="#[message.inboundProperties.'X-Destination-Identifier']"/>
         <set-variable variableName="X-Forwarded-For" value="#[message.inboundProperties.'X-Forwarded-For']"/>
 
         <set-variable variableName="originalMojaloopTransferRequest" value="#[payload]"/>
@@ -353,7 +355,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <expression-component doc:name="Get Data from Transfer Request">
             <![CDATA[payload = app.registry.utils.createMojaloopFulfillTransferResponse(flowVars.originalMojaloopTransferRequest)]]></expression-component>
         <set-property propertyName="FSPIOP-Source" value="#[flowVars.'FSPIOP-Destination']"/>
+        <set-property propertyName="X-Source-Identifier" value="#[flowVars.'X-Destination-Identifier']"/>
         <set-property propertyName="FSPIOP-Destination" value="#[flowVars.'FSPIOP-Source']"/>
+        <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']"/>
         <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']"/>
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
@@ -384,8 +388,12 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 	message.outboundProperties['Content-Type'] = "application/json";]]></expression-component>
         <expression-component doc:name="Set-FSPIOP-Source"><![CDATA[if( message.inboundProperties.'FSPIOP-Source' != null )
 	message.outboundProperties['FSPIOP-Source'] = message.inboundProperties.'FSPIOP-Source';]]></expression-component>
+        <expression-component doc:name="Set-X-Source-Identifier"><![CDATA[if( message.inboundProperties.'X-Source-Identifier' != null )
+	message.outboundProperties['X-Source-Identifier'] = message.inboundProperties.'X-Source-Identifier';]]></expression-component>
         <expression-component doc:name="Set-FSPIOP-Destination"><![CDATA[if( message.inboundProperties.'FSPIOP-Destination' != null )
 	message.outboundProperties['FSPIOP-Destination'] = message.inboundProperties.'FSPIOP-Destination';]]></expression-component>
+        <expression-component doc:name="Set-X-Destination-Identifier"><![CDATA[if( message.inboundProperties.'X-Destination-Identifier' != null )
+	message.outboundProperties['X-Destination-Identifier'] = message.inboundProperties.'X-Destination-Identifier';]]></expression-component>
         <expression-component doc:name="Set-X-Forwarded-For"><![CDATA[if( message.inboundProperties.'X-Forwarded-For' != null )
 	message.outboundProperties['X-Forwarded-For'] = message.inboundProperties.'X-Forwarded-For';]]></expression-component>
         <expression-component doc:name="Set-FSPIOP-Encryption"><![CDATA[if( message.inboundProperties.'FSPIOP-Encryption' != null )
