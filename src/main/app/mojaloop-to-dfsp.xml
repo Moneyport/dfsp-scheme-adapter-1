@@ -143,7 +143,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 
         <!-- Making call to DFSP to get the party/receiver information-->
         <logger level="INFO"
-                message="Sending request for GET on http://${dfsp-host}:${dfsp-api.port}/receivers/#[message.inboundProperties.ID], Authorization=#['Basic ']${dfsp-api.auth_value}"
+                message="Sending request for GET on http://${DFSP_HOST}:${DFSP_API_PORT}/receivers/#[message.inboundProperties.ID], Authorization=#['Basic ']${dfsp-api.auth_value}"
                 category="com.l1p.interop.scheme.adapter.fetch-payee" doc:name="logger"/>
         <http:request config-ref="dfsp-api-http-config" path="/receivers/#[message.inboundProperties.ID]"
                       method="GET" doc:name="HTTP">
@@ -166,7 +166,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
-                message="Sending Request to PUT http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/parties/#[flowVars.receiverType]/#[flowVars.receiverId] Payload: #[payload]"
+                message="Sending Request to PUT http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/parties/#[flowVars.receiverType]/#[flowVars.receiverId] Payload: #[payload]"
                 category="com.pdp.interop.switch" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/parties/#[flowVars.receiverType]/#[flowVars.receiverId]"
@@ -246,7 +246,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <expression-component doc:name="Generate DFSP Quotes Request">
             <![CDATA[payload = app.registry.utils.createDFSPQuotesRequest(payload)]]></expression-component>
         <logger level="INFO"
-                message="Posting request to Payee: http://${dfsp-host}:${dfsp-api.port}/quotes, method=post Payload: #[payload]"
+                message="Posting request to Payee: http://${DFSP_HOST}:${DFSP_API_PORT}/quotes, method=post Payload: #[payload]"
                 category="com.l1p.interop.scheme.adapter.quote" doc:name="logger"/>
         <http:request config-ref="dfsp-api-http-config" path="/quotes" method="POST"
                       doc:name="Call dfsp-api /quotes">
@@ -269,7 +269,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']"/>
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
-                message="Sending Request to PUT http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/quotes/#[flowVars.quoteId] Payload: #[payload]"
+                message="Sending Request to PUT http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/quotes/#[flowVars.quoteId] Payload: #[payload]"
                 category="com.pdp.interop.switch" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/quotes/#[flowVars.quoteId]"
@@ -304,7 +304,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 
         <!-- Call dfsp-api for payee id to extract account details-->
         <logger level="INFO"
-                message="Sending request for GET on http://${dfsp-host}:${dfsp-api.port}/receivers/#[flowVars.transferMap.payeeId]"
+                message="Sending request for GET on http://${DFSP_HOST}:${DFSP_API_PORT}/receivers/#[flowVars.transferMap.payeeId]"
                 category="com.l1p.interop.scheme.adapter.fetch-payee" doc:name="logger"/>
         <http:request config-ref="dfsp-api-http-config" path="/receivers/#[flowVars.transferMap.payeeId]"
                       method="GET" doc:name="HTTP">
@@ -322,9 +322,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 
         <!--   Call DFSP Prepare Transfer-->
         <expression-component doc:name="Get Prepare Transfer Request">
-            <![CDATA[payload = app.registry.utils.createDFSPPrepareTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, "${dfsp-host}", "${dfsp-ledger.port}","${dfsp-payee-connector.name}")]]></expression-component>
+            <![CDATA[payload = app.registry.utils.createDFSPPrepareTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, "${DFSP_HOST}", "${DFSP_LEDGER_PORT}","${dfsp-payee-connector.name}")]]></expression-component>
         <logger level="INFO"
-                message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId], method=put payload: #[payload]"
+                message="Proxying request to http://${DFSP_HOST}:${DFSP_LEDGER_PORT}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId], method=put payload: #[payload]"
                 category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger"/>
         <http:request config-ref="dfsp-ledger-http-config" path="/transfers/#[flowVars.transferId]"
                       method="PUT" doc:name="HTTP">
@@ -340,7 +340,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <![CDATA[payload = app.registry.utils.createDFSPFulfillTransferRequest(flowVars.originalMojaloopTransferRequest)]]></expression-component>
         <set-property propertyName="Content-Type" value="text/plain" doc:name="Property"/>
         <logger level="INFO"
-                message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId]/fulfillment, method=put payload: #[payload]"
+                message="Proxying request to http://${DFSP_HOST}:${DFSP_LEDGER_PORT}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId]/fulfillment, method=put payload: #[payload]"
                 category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger"/>
         <http:request config-ref="dfsp-ledger-http-config" path="/transfers/#[flowVars.transferId]/fulfillment"
                       method="PUT" doc:name="HTTP">
@@ -361,7 +361,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']"/>
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
-                message="Sending Request to PUT http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/transfers/#[flowVars.transferId] Payload: #[payload]"
+                message="Sending Request to PUT http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/transfers/#[flowVars.transferId] Payload: #[payload]"
                 category="com.pdp.interop.switch" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/transfers/#[flowVars.transferId]"

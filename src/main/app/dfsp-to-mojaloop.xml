@@ -21,7 +21,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/commads/register"
                        doc:name="HTTP"/>
         <logger level="INFO"
-                message="Sending Request to GET http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/fsp"
+                message="Sending Request to GET http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/fsp"
                 category="com.pdp.interop.switch.get-parties-type-id" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/fsp" method="POST" doc:name="Add FSP">
@@ -46,7 +46,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-variable variableName="correlationId" value="#[function:uuid] "/>
         <set-payload value="#[flowVars.retMap.addParticipantsRequest]"/>
         <logger level="INFO"
-                message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/participants/#[flowVars.retMap.identifierType]/#[flowVars.retMap.identifier] method:post payload: #[message.payloadAs(java.lang.String)] CorrelationId: #[flowVars.correlationId]"
+                message="Sending request to POST http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/participants/#[flowVars.retMap.identifierType]/#[flowVars.retMap.identifier] method:post payload: #[message.payloadAs(java.lang.String)] CorrelationId: #[flowVars.correlationId]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/participants/#[flowVars.retMap.identifierType]/#[flowVars.retMap.identifier]" method="POST"
@@ -73,7 +73,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                       doc:name="Save identifier"/>
         <set-variable variableName="correlationId" value="#[function:uuid] "/>
         <logger level="INFO"
-                message="Sending request to GET http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/parties/MSISDN/#[flowVars.partyId]"
+                message="Sending request to GET http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/parties/MSISDN/#[flowVars.partyId]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/parties/MSISDN/#[flowVars.partyId]" method="GET" doc:name="Call switch /parties">
@@ -90,7 +90,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <expression-component doc:name="Get Participant">
             <![CDATA[flowVars.payeeDetails = app.registry.syncAsyncMappingStore.getParticipant(flowVars.correlationId.trim())]]></expression-component>
         <expression-component doc:name="Generate response">
-            <![CDATA[payload = app.registry.utils.createDFSPGetResourcesResponse(flowVars.payeeDetails,flowVars.dfspName,'${dfsp-host}','8014')]]></expression-component>
+            <![CDATA[payload = app.registry.utils.createDFSPGetResourcesResponse(flowVars.payeeDetails,flowVars.dfspName,'${DFSP_HOST}','8014')]]></expression-component>
         <logger level="INFO"
                 message="Sending response to dfsp GET /resources: #[payload]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
@@ -119,7 +119,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <expression-component doc:name="Get Quote">
             <![CDATA[payload = app.registry.utils.createMojaloopQuotesRequest(flowVars.dfspQuoteRequest,flowVars.payerFspId,flowVars.payeeFspId)]]></expression-component>
         <logger level="INFO"
-                message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/quotes Payload: #[payload] FSPIOP-Source:#[flowVars.dfsp]"
+                message="Sending request to POST http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/quotes Payload: #[payload] FSPIOP-Source:#[flowVars.dfsp]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/quotes" method="POST" doc:name="Call switch /quotes">
@@ -139,7 +139,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <logger level="INFO" message="ML Quote Response:#[flowVars.quoteResponse]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <expression-component doc:name="Send Quote Response">
-            <![CDATA[payload = app.registry.utils.createDFSPQuotesResponse(flowVars.quoteResponse,flowVars.paymentId,flowVars.payerFspId,'${dfsp-host}')]]></expression-component>
+            <![CDATA[payload = app.registry.utils.createDFSPQuotesResponse(flowVars.quoteResponse,flowVars.paymentId,flowVars.payerFspId,'${DFSP_HOST}')]]></expression-component>
         <logger level="INFO" message="Sending DFSP Quote Response:#[payload]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
     </flow>
@@ -147,7 +147,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     <sub-flow name="getPayeeFspId">
         <set-variable variableName="payeeFspIdCorrelationId" value="#[function:uuid] "/>
         <logger level="INFO"
-                message="Sending request to GET http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/participants/MSISDN/#[flowVars.payeeId]"
+                message="Sending request to GET http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/participants/MSISDN/#[flowVars.payeeId]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/participants/MSISDN/#[flowVars.payeeId]" method="GET" doc:name="Call switch /participants">
@@ -178,11 +178,11 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-variable variableName="dfspRequest" value="#[payload]"/>
         <set-variable variableName="correlationId" value="#[function:uuid] "/>
         <expression-component doc:name="Send Quote Response">
-            <![CDATA[flowVars.retMap = app.registry.utils.createDFSPPayerPrepareTransferRequest(payload,'${dfsp-host}')]]></expression-component>
+            <![CDATA[flowVars.retMap = app.registry.utils.createDFSPPayerPrepareTransferRequest(payload,'${DFSP_HOST}')]]></expression-component>
         <set-variable variableName="paymentId" value="#[flowVars.retMap.paymentId]"/>
         <set-payload value="#[flowVars.retMap.prepareRequest]"/>
         <logger level="INFO"
-                message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.retMap.paymentId], method=put payload: #[payload]"
+                message="Proxying request to http://${DFSP_HOST}:${DFSP_LEDGER_PORT}${dfsp-ledger.basePath}/transfers/#[flowVars.retMap.paymentId], method=put payload: #[payload]"
                 category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger"/>
         <http:request config-ref="dfsp-ledger-http-config" path="/transfers/#[flowVars.retMap.paymentId]"
                       method="PUT" doc:name="HTTP">
@@ -194,7 +194,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <![CDATA[flowVars.retMap = app.registry.utils.createMojaloopPrepareTransferRequest(flowVars.dfspRequest)]]></expression-component>
         <set-payload value="#[flowVars.retMap.mlPrepareRequest]"/>
         <logger level="INFO"
-                message="Sending request to POST http://${mojaloop.host}:${mojaloop.port}${mojaloop.basepath}/transfers Payload: #[payload] FSPIOP-Source:#[flowVars.retMap.payerFspId] FSPIOP-Destination:#[flowVars.retMap.payeeFspId]"
+                message="Sending request to POST http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/transfers Payload: #[payload] FSPIOP-Source:#[flowVars.retMap.payerFspId] FSPIOP-Destination:#[flowVars.retMap.payeeFspId]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <http:request config-ref="mojaloop-http-config"
                       path="/transfers" method="POST" doc:name="Call switch /quotes">
@@ -220,7 +220,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-variable variableName="fulfillment" value="#[payload]"/>
         <set-property propertyName="Content-Type" value="text/plain" doc:name="Property"/>
         <logger level="INFO"
-                message="Proxying request to http://${dfsp-host}:${dfsp-ledger.port}${dfsp-ledger.basePath}/transfers/#[flowVars.paymentId]/fulfillment, method=put payload: #[payload]"
+                message="Proxying request to http://${DFSP_HOST}:${DFSP_LEDGER_PORT}${dfsp-ledger.basePath}/transfers/#[flowVars.paymentId]/fulfillment, method=put payload: #[payload]"
                 category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger"/>
         <http:request config-ref="dfsp-ledger-http-config" path="/transfers/#[flowVars.paymentId]/fulfillment"
                       method="PUT" doc:name="HTTP">

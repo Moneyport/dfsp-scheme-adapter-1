@@ -22,15 +22,15 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                      class="com.mojaloop.interop.Utils"/>
     </spring:beans>
 
-    <http:request-config name="mojaloop-http-config" host="${mojaloop.host}"
-                         port="${mojaloop.port}" basePath="${mojaloop.basepath}" doc:name="Mojaloop HTTP Config">
+    <http:request-config name="mojaloop-http-config" host="${MOJALOOP_HOST}"
+                         port="${MOJALOOP_PORT}" basePath="${mojaloop.basepath}" doc:name="Mojaloop HTTP Config">
     </http:request-config>
 
-    <http:request-config name="dfsp-api-http-config" host="${dfsp-host}" port="${dfsp-api.port}"
+    <http:request-config name="dfsp-api-http-config" host="${DFSP_HOST}" port="${DFSP_API_PORT}"
                          doc:name="DFSP API Config" responseTimeout="30000" />
 
     <http:request-config name="dfsp-ledger-http-config"
-                         host="${dfsp-host}" port="${dfsp-ledger.port}"
+                         host="${DFSP_HOST}" port="${DFSP_LEDGER_PORT}"
                          basePath="${dfsp-ledger.basePath}" doc:name="HTTP Request Configuration">
     </http:request-config>
 
