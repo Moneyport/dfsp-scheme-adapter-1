@@ -27,7 +27,7 @@ http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/
     <http:listener-config name="dfsp-scheme-adapter-httpListenerConfig" host="${DFSP_SCHEME_ADAPTER_HOST}" port="${DFSP_SCHEME_ADAPTER_PORT}" doc:name="HTTP Listener Configuration" />
     <http:listener-config name="dfsp-scheme-adapter-httpsListenerConfig" host="${DFSP_SCHEME_ADAPTER_HOST}" port="${DFSP_SCHEME_ADAPTER_HTTPS_PORT}" protocol="HTTPS" doc:name="HTTPS Listener Configuration">
         <tls:context>
-            <tls:key-store type="jks" path="keyStore.jks" alias="mojaloop" keyPassword="mojaloop" password="mojaloop"/>
+            <tls:key-store type="jks" path="keystore2.jks" alias="mojaloop" keyPassword="mojaloop" password="mojaloop"/>
         </tls:context>
     </http:listener-config>
 
