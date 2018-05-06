@@ -245,7 +245,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                       doc:name="Property - http status"/>
         <set-session-variable variableName="errorMessageId"
                               value="Transformer Messaging Exception" doc:name="set-errorMessageId"/>
-        <transformer ref="ExceptionTransformer" doc:name="Exception Transformer"/>
+        <!--<transformer ref="ExceptionTransformer" doc:name="Exception Transformer"/>-->
     </catch-exception-strategy>
 
 </mule>
