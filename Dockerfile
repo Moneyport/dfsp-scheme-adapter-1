@@ -1,6 +1,6 @@
 FROM anapsix/alpine-java:8_server-jre_unlimited
 
-ENV MULE_VERSION=3.9.0 HTTP_CONN_PORT_1=8088 INTEROP_DOMAIN_VERSION=0.1.38
+ENV MULE_VERSION=3.9.0 HTTP_CONN_PORT_1=8088
 
 # SSL Cert for downloading mule zip
 RUN apk --no-cache update && \
@@ -16,7 +16,6 @@ RUN cd ~ && wget https://repository-master.mulesoft.org/nexus/content/repositori
 
 RUN cd /opt && tar xvzf ~/mule-standalone-${MULE_VERSION}.tar.gz && rm ~/mule-standalone-${MULE_VERSION}.tar.gz && ln -s /opt/mule-standalone-${MULE_VERSION} /opt/mule
 
-RUN cd /opt/mule && wget https://docker-user:BMGFGates2016@modusbox.jfrog.io/modusbox/libs-release/com/l1p/interop/interop-domain/${INTEROP_DOMAIN_VERSION}/interop-domain-${INTEROP_DOMAIN_VERSION}.zip -O domains/interop-domain.zip
 
 ENV MULE_HOME /opt/mule
 

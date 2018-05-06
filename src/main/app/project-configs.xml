@@ -2,25 +2,34 @@
 
 <mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core"
       xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
       xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+
+    <!--<spring:beans>-->
+        <!--<spring:import resource="classpath:services-common.xml"/>-->
+        <!--<spring:import resource="classpath:metrics.xml"/>-->
+    <!--</spring:beans>-->
 
     <spring:beans>
-        <spring:import resource="classpath:services-common.xml"/>
-        <spring:import resource="classpath:metrics.xml"/>
-    </spring:beans>
-
-    <spring:beans>
-        <spring:bean id="ExceptionTransformer" name="ExceptionTransformer"
-                     class="com.pdp.interop.L1PExceptionTransformer"/>
+        <!--<spring:bean id="ExceptionTransformer" name="ExceptionTransformer"-->
+                     <!--class="com.pdp.interop.L1PExceptionTransformer"/>-->
         <spring:bean id="syncAsyncMappingStore" name="SyncAsyncMappingStore"
                      class="com.mojaloop.interop.SyncAsyncMappingStore"/>
         <spring:bean id="utils" name="Utils"
                      class="com.mojaloop.interop.Utils"/>
     </spring:beans>
+
+    <http:listener-config name="dfsp-scheme-adapter-httpListenerConfig" host="${DFSP_SCHEME_ADAPTER_HOST}" port="${DFSP_SCHEME_ADAPTER_PORT}" doc:name="HTTP Listener Configuration" />
+    <http:listener-config name="dfsp-scheme-adapter-httpsListenerConfig" host="${DFSP_SCHEME_ADAPTER_HOST}" port="${DFSP_SCHEME_ADAPTER_HTTPS_PORT}" protocol="HTTPS" doc:name="HTTPS Listener Configuration">
+        <tls:context>
+            <tls:key-store type="jks" path="keyStore.jks" alias="mojaloop" keyPassword="mojaloop" password="mojaloop"/>
+        </tls:context>
+    </http:listener-config>
 
     <http:request-config name="mojaloop-http-config" host="${MOJALOOP_HOST}"
                          port="${MOJALOOP_PORT}" basePath="${mojaloop.basepath}" doc:name="Mojaloop HTTP Config">

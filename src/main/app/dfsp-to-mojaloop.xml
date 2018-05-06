@@ -9,7 +9,7 @@ http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/a
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
 
     <flow name="get:/health">
-        <http:listener config-ref="api-httpListenerConfig" path="${dfsp-scheme-adapter.basepath}/health"
+        <http:listener config-ref="dfsp-scheme-adapter-httpListenerConfig" path="${dfsp-scheme-adapter.basepath}/health"
                        doc:name="HTTP"/>
         <set-payload value="{ &quot;status&quot; : &quot;ok&quot; }"
                      doc:name="Set Payload" mimeType="application/json"/>
@@ -18,7 +18,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
 
     <flow name="post:/commands/register">
-        <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/commads/register"
+        <http:listener config-ref="dfsp-scheme-adapter-httpListenerConfig" path="/directory/v1/commads/register"
                        doc:name="HTTP"/>
         <logger level="INFO"
                 message="Sending Request to GET http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/fsp"
@@ -37,7 +37,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
 
     <flow name="post:/resources">
-        <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/resources" allowedMethods="POST"
+        <http:listener config-ref="dfsp-scheme-adapter-httpListenerConfig" path="/directory/v1/resources" allowedMethods="POST"
                        doc:name="HTTP"/>
         <object-to-string-transformer/>
         <expression-component doc:name="Get Participant">
@@ -63,7 +63,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
 
     <flow name="get:/resources:central-directory-api-config">
-        <http:listener config-ref="api-httpListenerConfig" path="/directory/v1/resources" allowedMethods="GET"
+        <http:listener config-ref="dfsp-scheme-adapter-httpListenerConfig" path="/directory/v1/resources" allowedMethods="GET"
                        doc:name="HTTP"/>
         <object-to-string-transformer/>
         <expression-component doc:name="Get Participant">
@@ -97,7 +97,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
 
     <flow name="POST:/quotes:central-directory-api-config">
-        <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/v1/quotes" allowedMethods="POST"
+        <http:listener config-ref="dfsp-scheme-adapter-httpListenerConfig" path="/scheme/adapter/v1/quotes" allowedMethods="POST"
                        doc:name="HTTP"/>
         <object-to-string-transformer/>
         <logger level="INFO"
@@ -169,7 +169,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </sub-flow>
 
     <flow name="PUT:/payments:central-directory-api-config">
-        <http:listener config-ref="api-httpListenerConfig" path="/scheme/adapter/v1/payments" allowedMethods="PUT"
+        <http:listener config-ref="dfsp-scheme-adapter-httpListenerConfig" path="/scheme/adapter/v1/payments" allowedMethods="PUT"
                        doc:name="HTTP"/>
         <object-to-string-transformer/>
         <logger level="INFO"
