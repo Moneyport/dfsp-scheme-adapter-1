@@ -111,7 +111,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                 flowVars.payeeId = JsonPath.from(payload).getString("payee.identifier");
                 ]]></expression-component>
         <set-variable variableName="payerFspId"
-                      value="#['${dfsp-environment}'.substring(0,'${dfsp-environment}'.indexOf('-'))]"/>
+                      value="#['${DFSP_ENVIRONMENT}'.substring(0,'${DFSP_ENVIRONMENT}'.indexOf('-'))]"/>
         <!-- TODO Replace the below logic with call to account lookup-->
         <!--<set-variable variableName="payeeFspId"-->
                       <!--value="dfsp2"/>-->

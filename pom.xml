@@ -21,18 +21,18 @@
 
 	<properties>
 		<interop-domain.version>1.0.4</interop-domain.version>
+		<interop-common.version>1.0.1</interop-common.version>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
     	<mule.version>3.8.1</mule.version>
     </properties>
 
 	<dependencies>
-    	<dependency>
-            <groupId>com.pdp.interop</groupId>
-            <artifactId>interop-domain</artifactId>
-			<version>${interop-domain.version}</version>
-            <type>zip</type>
-        </dependency>
+		<dependency>
+			<groupId>com.pdp.interop</groupId>
+			<artifactId>interop-common</artifactId>
+			<version>${interop-common.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>com.interop.ilp.conditions</groupId>
 			<artifactId>interop-ilp-conditions</artifactId>
