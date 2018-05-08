@@ -16,8 +16,9 @@ http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/
     <!--</spring:beans>-->
 
     <spring:beans>
-        <!--<spring:bean id="ExceptionTransformer" name="ExceptionTransformer"-->
-                     <!--class="com.pdp.interop.L1PExceptionTransformer"/>-->
+        <spring:import resource="classpath:services-common.xml"/>
+        <spring:bean id="ExceptionTransformer" name="ExceptionTransformer"
+                     class="com.pdp.interop.L1PExceptionTransformer"/>
         <spring:bean id="syncAsyncMappingStore" name="SyncAsyncMappingStore"
                      class="com.mojaloop.interop.SyncAsyncMappingStore"/>
         <spring:bean id="utils" name="Utils"
