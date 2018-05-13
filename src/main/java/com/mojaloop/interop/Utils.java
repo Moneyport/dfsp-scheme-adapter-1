@@ -99,7 +99,7 @@ public class Utils {
                     .add("firstName", jPath.getString("party.personalInfo.complexName.firstName"))
                     .add("lastName", jPath.getString("party.personalInfo.complexName.lastName"))
                     .add("nationalId", "")
-                    .add("dob", jPath.getString("party.personalInfo.dateOfBirth"))
+                    .add("dob", (jPath.getString("party.personalInfo.dateOfBirth")!=null) ? jPath.getString("party.personalInfo.dateOfBirth"):"")
                     .add("account", account)
                     .add("currencyCode", "TZS")
                     .add("currencySymbol", "TSh")
