@@ -81,12 +81,13 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                 <http:header headerName="FSPIOP-Source"
                              value="#[flowVars.dfspName]"/>
                 <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
+                <http:header headerName="X-Correlation-Id" value="#[flowVars.correlationId]"/>
             </http:request-builder>
             <http:success-status-code-validator values="200..599"/>
         </http:request>
 
         <expression-component doc:name="Get Participant">
-            <![CDATA[Thread.sleep(1000)]]></expression-component>
+            <![CDATA[Thread.sleep(2000)]]></expression-component>
         <expression-component doc:name="Get Participant">
             <![CDATA[flowVars.payeeDetails = app.registry.syncAsyncMappingStore.getParticipant(flowVars.correlationId.trim())]]></expression-component>
         <expression-component doc:name="Generate response">
@@ -113,9 +114,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-variable variableName="payerFspId"
                       value="#['${DFSP_ENVIRONMENT}'.substring(0,'${DFSP_ENVIRONMENT}'.indexOf('-'))]"/>
         <!-- TODO Replace the below logic with call to account lookup-->
-        <!--<set-variable variableName="payeeFspId"-->
-                      <!--value="dfsp2"/>-->
-        <flow-ref name="getPayeeFspId"/>
+        <set-variable variableName="payeeFspId"
+                      value="dfsp2"/>
+        <!--<flow-ref name="getPayeeFspId"/>-->
         <expression-component doc:name="Get Quote">
             <![CDATA[payload = app.registry.utils.createMojaloopQuotesRequest(flowVars.dfspQuoteRequest,flowVars.payerFspId,flowVars.payeeFspId)]]></expression-component>
         <logger level="INFO"
@@ -133,9 +134,11 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <http:success-status-code-validator values="200..599"/>
         </http:request>
         <expression-component doc:name="Wait">
-            <![CDATA[Thread.sleep(1000)]]></expression-component>
+            <![CDATA[Thread.sleep(2000)]]></expression-component>
+        <!--<expression-component doc:name="Get Quote Response">-->
+            <!--<![CDATA[flowVars.quoteResponse = app.registry.syncAsyncMappingStore.getQuote(flowVars.correlationId.trim())]]></expression-component>-->
         <expression-component doc:name="Get Quote Response">
-            <![CDATA[flowVars.quoteResponse = app.registry.syncAsyncMappingStore.getQuote(flowVars.correlationId.trim())]]></expression-component>
+            <![CDATA[flowVars.quoteResponse = app.registry.syncAsyncMappingStore.getQuote(flowVars.paymentId.trim())]]></expression-component>
         <logger level="INFO" message="ML Quote Response:#[flowVars.quoteResponse]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
         <expression-component doc:name="Send Quote Response">
@@ -209,8 +212,10 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         </http:request>
         <expression-component doc:name="Wait">
             <![CDATA[Thread.sleep(2000)]]></expression-component>
+        <!--<expression-component doc:name="Get Payment Fulfill Response">-->
+            <!--<![CDATA[flowVars.paymentFulfillResponse = app.registry.syncAsyncMappingStore.getPaymentFulfillResponse(flowVars.correlationId.trim())]]></expression-component>-->
         <expression-component doc:name="Get Payment Fulfill Response">
-            <![CDATA[flowVars.paymentFulfillResponse = app.registry.syncAsyncMappingStore.getPaymentFulfillResponse(flowVars.correlationId.trim())]]></expression-component>
+            <![CDATA[flowVars.paymentFulfillResponse = app.registry.syncAsyncMappingStore.getPaymentFulfillResponse(flowVars.paymentId.trim())]]></expression-component>
         <logger level="INFO" message="ML Payment Fulfill Response:#[flowVars.paymentFulfillResponse]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
 

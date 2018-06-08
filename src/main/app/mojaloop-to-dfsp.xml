@@ -63,7 +63,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
     </flow>
     <flow name="put:/parties/{Type}/{ID}:application/json:mojaloop-config">
-        <set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Forwarded-For']" doc:name="Variable"/>
+        <!--<set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Forwarded-For']" doc:name="Variable"/>-->
+        <set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Correlation-Id']" doc:name="Variable"/>
         <object-to-string-transformer doc:name="Object to String"/>
         <expression-component doc:name="Post Participant">
             <![CDATA[app.registry.syncAsyncMappingStore.addParticipant(flowVars.correlationId.trim(),payload)]]></expression-component>
@@ -76,15 +77,21 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     </flow>
     <flow name="put:/transfers/{ID}:application/json:mojaloop-config">
         <set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Forwarded-For']" doc:name="Variable"/>
+        <set-variable variableName="transferId" value="#[message.inboundProperties.'http.uri.params'.ID]" doc:name="Variable"/>
         <object-to-string-transformer doc:name="Object to String"/>
+        <!--<expression-component doc:name="PUT  Quote">-->
+            <!--<![CDATA[app.registry.syncAsyncMappingStore.addPaymentFulfillResponse(flowVars.correlationId.trim(),payload)]]></expression-component>-->
         <expression-component doc:name="PUT  Quote">
-            <![CDATA[app.registry.syncAsyncMappingStore.addPaymentFulfillResponse(flowVars.correlationId.trim(),payload)]]></expression-component>
+            <![CDATA[app.registry.syncAsyncMappingStore.addPaymentFulfillResponse(flowVars.transferId.trim(),payload)]]></expression-component>
     </flow>
     <flow name="put:/quotes/{ID}:application/json:mojaloop-config">
         <set-variable variableName="correlationId" value="#[message.inboundProperties.'X-Forwarded-For']" doc:name="Variable"/>
+        <set-variable variableName="quoteId" value="#[message.inboundProperties.'http.uri.params'.ID]" doc:name="Variable"/>
         <object-to-string-transformer doc:name="Object to String"/>
+        <!--<expression-component doc:name="PUT  Quote">-->
+            <!--<![CDATA[app.registry.syncAsyncMappingStore.addQuote(flowVars.correlationId.trim(),payload)]]></expression-component>-->
         <expression-component doc:name="PUT  Quote">
-            <![CDATA[app.registry.syncAsyncMappingStore.addQuote(flowVars.correlationId.trim(),payload)]]></expression-component>
+            <![CDATA[app.registry.syncAsyncMappingStore.addQuote(flowVars.quoteId.trim(),payload)]]></expression-component>
     </flow>
     <flow name="put:/bulkTransfers/{ID}:application/json:mojaloop-config">
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
@@ -140,6 +147,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-variable variableName="FSPIOP-Source" value="#[message.inboundProperties.'FSPIOP-Source']" doc:name="Variable"/>
         <set-variable variableName="FSPIOP-Destination" value="#[message.inboundProperties.'FSPIOP-Destination']" doc:name="Variable"/>
         <set-variable variableName="X-Forwarded-For" value="#[message.inboundProperties.'X-Forwarded-For']" doc:name="Variable"/>
+        <set-variable variableName="X-Correlation-Id" value="#[message.inboundProperties.'X-Correlation-Id']" doc:name="Variable"/>
         <set-variable variableName="dfsp-api.auth_value" value="#[Base64.getEncoder().encodeToString(&quot;${DFSP_ENVIRONMENT}:${DFSP_ENVIRONMENT}&quot;.getBytes(&quot;utf-8&quot;))]" doc:name="dfsp-auth"/>
 
         
@@ -166,6 +174,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-property propertyName="FSPIOP-Source" value="#[flowVars.'FSPIOP-Destination']" doc:name="Property"/>
         <set-property propertyName="FSPIOP-Destination" value="#[flowVars.'FSPIOP-Source']" doc:name="Property"/>
         <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']" doc:name="Property"/>
+        <set-property propertyName="X-Correlation-Id" value="#[flowVars.'X-Correlation-Id']" doc:name="Property"/>
 
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
@@ -410,6 +419,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 	message.outboundProperties['FSPIOP-URI'] = message.inboundProperties.'FSPIOP-URI';]]></expression-component>
         <expression-component doc:name="Set-FSPIOP-HTTP-Method"><![CDATA[if( message.inboundProperties.'FSPIOP-HTTP-Method' != null )
 	message.outboundProperties['FSPIOP-HTTP-Method'] = message.inboundProperties.'FSPIOP-HTTP-Method';]]></expression-component>
+        <expression-component doc:name="Set-X-Correlation-Id"><![CDATA[if( message.inboundProperties.'X-Correlation-Id' != null )
+	message.outboundProperties['X-Correlation-Id'] = message.inboundProperties.'X-Correlation-Id';]]></expression-component>
         <logger message="In populate outbound properties subflow. Outbound properties at this stage: #[message.outboundProperties]"
                 level="INFO" category="com.l1p.interop.routing.populate-outbound-properties" doc:name="logger"/>
     </sub-flow>
