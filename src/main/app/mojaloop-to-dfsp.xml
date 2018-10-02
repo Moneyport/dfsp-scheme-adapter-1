@@ -334,10 +334,14 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                 category="com.pdp.interop.switch" doc:name="logger"/>
         <json:json-to-object-transformer returnClass="java.util.HashMap" doc:name="JSON to Object"/>
         <set-variable variableName="payeeAccount" value="#[payload.account]" doc:name="Variable"/>
+        <set-variable variableName="payerFspId"
+                      value="#['${DFSP_ENVIRONMENT}'.substring(0,'${DFSP_ENVIRONMENT}'.indexOf('-'))]"/>
 
         <!--   Call DFSP Prepare Transfer-->
+        <!--<expression-component doc:name="Get Prepare Transfer Request">-->
+            <!--<![CDATA[payload = app.registry.utils.createDFSPPrepareTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, "${DFSP_HOST}", "${DFSP_LEDGER_PORT}","${dfsp-payee-connector.name}")]]></expression-component>-->
         <expression-component doc:name="Get Prepare Transfer Request">
-            <![CDATA[payload = app.registry.utils.createDFSPPrepareTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, "${DFSP_HOST}", "${DFSP_LEDGER_PORT}","${dfsp-payee-connector.name}")]]></expression-component>
+            <![CDATA[payload = app.registry.utils.createDFSPPrepareTransferRequest(flowVars.originalMojaloopTransferRequest, flowVars.payeeAccount, "${DFSP_HOST}", "${DFSP_LEDGER_PORT}",flowVars.payerFspId+"-testconnector")]]></expression-component>
         <logger level="INFO"
                 message="Proxying request to http://${DFSP_HOST}:${DFSP_LEDGER_PORT}${dfsp-ledger.basePath}/transfers/#[flowVars.transferId], method=put payload: #[payload]"
                 category="com.l1p.interop.ilp.ledger.api-main" doc:name="logger"/>
@@ -369,11 +373,13 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <!-- Call Mojaloop Callback PUT for Fulfill Transfer-->
         <expression-component doc:name="Get Data from Transfer Request">
             <![CDATA[payload = app.registry.utils.createMojaloopFulfillTransferResponse(flowVars.originalMojaloopTransferRequest)]]></expression-component>
+        <expression-component doc:name="dateHeader"><![CDATA[#[ flowVars.dateHeader = server.dateTime.format('EEE, d MMM yyyy HH:mm:ss z').toString() ]]]></expression-component>
         <set-property propertyName="FSPIOP-Source" value="#[flowVars.'FSPIOP-Destination']" doc:name="Property"/>
         <set-property propertyName="X-Source-Identifier" value="#[flowVars.'X-Destination-Identifier']" doc:name="Property"/>
         <set-property propertyName="FSPIOP-Destination" value="#[flowVars.'FSPIOP-Source']" doc:name="Property"/>
         <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']" doc:name="Property"/>
         <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']" doc:name="Property"/>
+        <set-property propertyName="Date" value="#[flowVars.dateHeader]" doc:name="Property"/>
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
                 message="Sending Request to PUT http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/transfers/#[flowVars.transferId] Payload: #[payload]"

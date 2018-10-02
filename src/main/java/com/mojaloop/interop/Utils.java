@@ -471,6 +471,7 @@ public class Utils {
         return Json.createObjectBuilder()
                         .add("fulfilment",rawFulfillment)
                         .add("transferState","COMMITTED")
+                        .add("completedTimestamp","2018-10-30T08:38:08.699-04:00")
                         .build()
                         .toString();
     }
