@@ -213,7 +213,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <http:success-status-code-validator values="200..599"/>
         </http:request>
         <expression-component doc:name="Wait">
-            <![CDATA[Thread.sleep(2000)]]></expression-component>
+            <![CDATA[Thread.sleep(4000)]]></expression-component>
         <!--<expression-component doc:name="Get Payment Fulfill Response">-->
             <!--<![CDATA[flowVars.paymentFulfillResponse = app.registry.syncAsyncMappingStore.getPaymentFulfillResponse(flowVars.correlationId.trim())]]></expression-component>-->
         <expression-component doc:name="Get Payment Fulfill Response">
