@@ -198,9 +198,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-payload value="#[flowVars.retMap.mlPrepareRequest]"/>
         <expression-component doc:name="dateHeader"><![CDATA[#[ flowVars.dateHeader = server.dateTime.format('EEE, d MMM yyyy HH:mm:ss z').toString() ]]]></expression-component>
         <logger level="INFO"
-                message="Sending request to POST http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/transfers Payload: #[payload] FSPIOP-Source:#[flowVars.retMap.payerFspId] FSPIOP-Destination:#[flowVars.retMap.payeeFspId]"
+                message="Sending request to POST http://test-ml-api-adapter.mojaloop.live:80/transfers Payload: #[payload] FSPIOP-Source:#[flowVars.retMap.payerFspId] FSPIOP-Destination:#[flowVars.retMap.payeeFspId]"
                 category="com.mojaloop.interop.dfsp.scheme.adapter" doc:name="logger"/>
-        <http:request config-ref="mojaloop-http-config"
+        <http:request config-ref="mojaloop-http-config-transfers"
                       path="/transfers" method="POST" doc:name="Call switch /quotes">
             <http:request-builder>
                 <http:header headerName="FSPIOP-Source"
@@ -208,6 +208,8 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                 <http:header headerName="FSPIOP-Destination"
                              value="#[flowVars.retMap.payeeFspId]"/>
                 <http:header headerName="Date" value="#[flowVars.dateHeader]"/>
+                <http:header headerName="Accept" value="application/vnd.interoperability.transfers+json;version=1"/>
+                <http:header headerName="Content-Type" value="application/vnd.interoperability.transfers+json;version=1"/>
                 <http:header headerName="X-Forwarded-For" value="#[flowVars.correlationId]"/>
             </http:request-builder>
             <http:success-status-code-validator values="200..599"/>

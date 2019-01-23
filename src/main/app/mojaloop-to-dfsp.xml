@@ -14,7 +14,7 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
     <apikit:config name="mojaloop-config" raml="mojaloop.raml" consoleEnabled="false" doc:name="Router"/>
 
     <flow name="mojaloop-main">
-        <http:listener config-ref="dfsp-scheme-adapter-httpsListenerConfig" path="/scheme/adapter/ml-dfsp/v1/*" doc:name="HTTP"/>
+        <http:listener config-ref="dfsp-scheme-adapter-httpListenerConfig" path="/scheme/adapter/ml-dfsp/v1/*" doc:name="HTTP"/>
         <logger level="INFO"
                 message="Received request at method=#[message.inboundProperties.'http.method'], url=http://#[message.inboundProperties.'host'+message.inboundProperties.'http.request.path'], Payload=#[message.payloadAs(java.lang.String)]; Headers :: FSPIOP-Source: #[message.inboundProperties.'FSPIOP-Source'], FSPIOP-Destination: #[message.inboundProperties.'FSPIOP-Destination'], Accept: #[message.inboundProperties.'Accept'], Date: #[message.inboundProperties.'Date'], Content-Type: #[message.inboundProperties.'Content-Type']"
                 category="com.l1p.interop.routing" doc:name="logger"/>
@@ -380,11 +380,13 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
         <set-property propertyName="X-Destination-Identifier" value="#[flowVars.'X-Source-Identifier']" doc:name="Property"/>
         <set-property propertyName="X-Forwarded-For" value="#[flowVars.'X-Forwarded-For']" doc:name="Property"/>
         <set-property propertyName="Date" value="#[flowVars.dateHeader]" doc:name="Property"/>
+        <set-property propertyName="Accept" value="application/vnd.interoperability.transfers+json;version=1" doc:name="Property"/>
+        <set-property propertyName="Content-Type" value="application/vnd.interoperability.transfers+json;version=1" doc:name="Property"/>
         <object-to-string-transformer mimeType="application/json" doc:name="Object to String"/>
         <logger level="INFO"
-                message="Sending Request to PUT http://${MOJALOOP_HOST}:${MOJALOOP_PORT}${mojaloop.basepath}/transfers/#[flowVars.transferId] Payload: #[payload]"
+                message="Sending Request to PUT http://test-ml-api-adapter.mojaloop.live:80/transfers/#[flowVars.transferId] Payload: #[payload]"
                 category="com.pdp.interop.switch" doc:name="logger"/>
-        <http:request config-ref="mojaloop-http-config"
+        <http:request config-ref="mojaloop-http-config-transfers"
                       path="/transfers/#[flowVars.transferId]"
                       method="PUT" doc:name="HTTP">
             <http:success-status-code-validator values="200..599"/>

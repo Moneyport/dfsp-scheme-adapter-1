@@ -36,6 +36,10 @@ http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/
                          port="${MOJALOOP_PORT}" basePath="${mojaloop.basepath}" doc:name="Mojaloop HTTP Config">
     </http:request-config>
 
+    <http:request-config name="mojaloop-http-config-transfers" host="test-ml-api-adapter.mojaloop.live"
+                         port="80" doc:name="Mojaloop HTTP Config">
+    </http:request-config>
+
     <http:request-config name="dfsp-api-http-config" host="${DFSP_HOST}" port="${DFSP_API_PORT}"
                          doc:name="DFSP API Config" responseTimeout="30000" />
 
